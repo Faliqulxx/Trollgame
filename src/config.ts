@@ -16,8 +16,8 @@ export const CONFIG = {
     GRAVITY: 2200,           // px/s²
     JUMP_SPEED: -720,        // px/s (negatif = ke atas)
     MAX_FALL_SPEED: 1000,    // px/s
-    COYOTE_TIME: 0.10,       // detik
-    JUMP_BUFFER_TIME: 0.12,  // detik
+    COYOTE_TIME: 0.18,       // detik toleransi lompat setelah meninggalkan tepi platform
+    JUMP_BUFFER_TIME: 0.18,  // detik toleransi input sebelum mendarat di tanah
     VARIABLE_JUMP_MULTIPLIER: 0.5, // pemotongan kecepatan saat lepas tombol
   },
 

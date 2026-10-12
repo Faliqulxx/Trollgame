@@ -175,8 +175,8 @@ export class HUD {
     ctx.fillStyle = 'rgba(18, 18, 22, 0.7)';
     ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
 
-    if (this.currentLevelId >= 6) {
-      // MODAL SPESIAL LEVEL 6: NOTIFIKASI BAYAR DEV RP 10.000 UNTUK LANJUT KE LEVEL 7-100
+    if (this.currentLevelId >= 10) {
+      // MODAL SPESIAL LEVEL 10: NOTIFIKASI BAYAR DEV RP 10.000 UNTUK LANJUT KE LEVEL 11-20
       const mw = 460;
       const mh = 320;
       const mx = (CONFIG.CANVAS_WIDTH - mw) / 2;
@@ -194,7 +194,7 @@ export class HUD {
       ctx.fillStyle = CONFIG.COLORS.EXIT_GREEN;
       ctx.font = '900 26px Outfit, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🎉 LEVEL 6 SELESAI!', CONFIG.CANVAS_WIDTH / 2, my + 40);
+      ctx.fillText('🎉 LEVEL 10 SELESAI!', CONFIG.CANVAS_WIDTH / 2, my + 40);
 
       // Statistik Ringkas
       ctx.fillStyle = '#555';
@@ -217,7 +217,7 @@ export class HUD {
 
       ctx.fillStyle = '#d9480f';
       ctx.font = '900 16px Outfit, sans-serif';
-      ctx.fillText('🔒 LEVEL 7 - 100 TERKUNCI!', CONFIG.CANVAS_WIDTH / 2, nbY + 28);
+      ctx.fillText('🔒 LEVEL 11 - 20 TERKUNCI!', CONFIG.CANVAS_WIDTH / 2, nbY + 28);
 
       ctx.fillStyle = '#2b2b36';
       ctx.font = '14px Outfit, sans-serif';
@@ -245,7 +245,7 @@ export class HUD {
       ctx.font = 'bold 16px Outfit, sans-serif';
       ctx.fillText('⬅ KEMBALI KE MENU', CONFIG.CANVAS_WIDTH / 2, nextBtnY + 26);
     } else {
-      // Modal Normal (Level 1 - 5)
+      // Modal Normal (Level 1 - 9)
       const mw = 420;
       const mh = 260;
       const mx = (CONFIG.CANVAS_WIDTH - mw) / 2;
@@ -425,7 +425,7 @@ export class HUD {
   public getClickedAction(px: number, py: number): string | null {
     // 1. Cek tombol modal level selesai
     if (this.isLevelClear) {
-      if (this.currentLevelId >= 6) {
+      if (this.currentLevelId >= 10) {
         const mw = 460;
         const mh = 320;
         const mx = (CONFIG.CANVAS_WIDTH - mw) / 2;

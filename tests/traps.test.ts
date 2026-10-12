@@ -225,4 +225,37 @@ describe('Trap Mechanics & Anti-Bug Tests (v1.1)', () => {
     expect(trap.getHitboxes().some(hb => Collision.aabb(playerBelow.getHitbox(), hb))).toBe(true);
     expect(thwomp.getHitboxes().some(hb => Collision.aabb(playerBelow.getHitbox(), hb))).toBe(true);
   });
+
+  // ========================================================
+  // FallingPillar: Muncul dari bawah setelah dilewati & tumbang ke depan
+  // ========================================================
+  it('FallingPillar muncul dari bawah setelah dilewati dan tumbang ke depan menimpa pemain', async () => {
+    const { FallingPillar } = await import('../src/entities/traps/FallingPillar');
+
+    // Pilar di x: 500, floorY: 352
+    const pillar = new FallingPillar('fp_test', 500, 352, 48, 200);
+
+    // 1. Sebelum dilewati pemain (pemain masih di belakang x: 450)
+    const playerBefore = new Player(450, 312);
+    pillar.update(0.016, playerBefore);
+    expect(pillar.state).toBe('HIDDEN');
+    expect(pillar.isDeadly()).toBe(false);
+
+    // 2. Pemain melangkah melewati pilar (pemain di x: 520)
+    const playerPassed = new Player(520, 312);
+    pillar.update(0.016, playerPassed);
+    expect(pillar.state).toBe('EMERGING');
+
+    // 3. Update hingga pilar naik penuh dan mulai tumbang (TOPPLING)
+    pillar.update(0.4, playerPassed);
+    expect(pillar.state).toBe('TOPPLING');
+    expect(pillar.isDeadly()).toBe(true);
+    expect(pillar.angle).toBeGreaterThan(0);
+
+    // 4. Update hingga pilar roboh rata di lantai (FALLEN)
+    pillar.update(0.6, playerPassed);
+    expect(pillar.state).toBe('FALLEN');
+    expect(pillar.isDeadly()).toBe(false);
+    expect(pillar.getSolidBox()).not.toBeNull();
+  });
 });

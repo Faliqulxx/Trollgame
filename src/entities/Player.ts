@@ -38,8 +38,9 @@ export class Player {
   public gravityScale = 1;      // -1 jika terbalik
   public controlsInverted = false;
 
-  // Animasi
+  // Animasi & Jump Grace
   private animTimer = 0;
+  private jumpGraceTimer = 0;
   public isDead = false;
 
   constructor(spawnX = 0, spawnY = 0) {
@@ -55,6 +56,7 @@ export class Player {
     this.wasGrounded = false;
     this.coyoteTimer = 0;
     this.jumpBufferTimer = 0;
+    this.jumpGraceTimer = 0;
     this.gravityScale = 1;
     this.controlsInverted = false;
     this.isDead = false;
@@ -137,18 +139,22 @@ export class Player {
       this.vy = CONFIG.PLAYER.JUMP_SPEED * this.gravityScale;
       this.coyoteTimer = 0;
       this.jumpBufferTimer = 0;
+      this.jumpGraceTimer = 0.08; // 80ms grace time untuk memastikan awal loncatan selalu penuh
       this.isGrounded = false;
+      input.consumeJump?.();
       audio?.playJump();
       if (particles) {
         particles.emitDust(this.x + this.width / 2, this.y + (this.gravityScale > 0 ? this.height : 0), 6);
       }
     }
 
-    // 5. Variable Jump Height: potong loncatan jika tombol dilepas lebih awal
-    if (!input.isJump()) {
-      if (this.gravityScale > 0 && this.vy < 0) {
+    // 5. Variable Jump Height: potong loncatan HANYA jika tombol dilepas dan sudah melewati grace timer
+    if (this.jumpGraceTimer > 0) {
+      this.jumpGraceTimer -= dt;
+    } else if (!input.isJump()) {
+      if (this.gravityScale > 0 && this.vy < -250) {
         this.vy *= Math.pow(CONFIG.PLAYER.VARIABLE_JUMP_MULTIPLIER, dt * 60);
-      } else if (this.gravityScale < 0 && this.vy > 0) {
+      } else if (this.gravityScale < 0 && this.vy > 250) {
         this.vy *= Math.pow(CONFIG.PLAYER.VARIABLE_JUMP_MULTIPLIER, dt * 60);
       }
     }
@@ -242,6 +248,26 @@ export class Player {
           }
         }
         hitbox.y = this.y;
+      }
+    }
+
+    // Ground probe: Jika pemain sedang berjalan/berdiri di atas lantai datar (selisih <= 3px) dan vy kecil
+    // memastikan status isGrounded tidak pernah fluktuasi/hilang di antara sambungan tile
+    if (!this.isGrounded && this.gravityScale > 0 && this.vy >= 0 && this.vy < 200) {
+      const probe: Rect = {
+        x: this.x + 2,
+        y: this.y + this.height,
+        w: this.width - 4,
+        h: 3
+      };
+      const probeSolids = map.getSolidTilesInRect(probe);
+      for (const s of probeSolids) {
+        if (Collision.aabb(probe, s)) {
+          this.isGrounded = true;
+          this.y = s.y - this.height;
+          this.vy = 0;
+          break;
+        }
       }
     }
   }

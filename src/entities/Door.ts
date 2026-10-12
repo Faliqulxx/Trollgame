@@ -17,6 +17,8 @@ export class Door {
   // Fitur Troll Teleportasi Pintu
   public teleportTarget?: { x: number; y: number };
   public hasTeleported = false;
+  public checkpoint?: Checkpoint;
+  public onTeleportDestroy?: (x: number, y: number) => void;
   private audio?: AudioManager;
   private particles?: ParticleSystem;
   private camera?: Camera;
@@ -40,9 +42,13 @@ export class Door {
   }
 
   public reset(): void {
-    this.x = this.initialX;
-    this.y = this.initialY;
-    this.hasTeleported = false;
+    // Jika pintu belum hancur/teleport, reset posisinya ke awal.
+    // Jika sudah hancur (teleport), biarkan tetap di posisi baru karena
+    // lokasi awal sudah menjadi checkpoint permanen untuk pemain!
+    if (!this.hasTeleported) {
+      this.x = this.initialX;
+      this.y = this.initialY;
+    }
   }
 
   public update(player: Player): void {
@@ -52,7 +58,7 @@ export class Door {
         (player.y + player.height / 2) - (this.y + this.h / 2)
       );
 
-      // Begitu pemain mendekati pintu (jarak < 85px), pintu berteleportasi!
+      // Begitu pemain mendekati pintu (jarak < 85px), pintu hancur & berteleportasi!
       if (dist < 85) {
         this.hasTeleported = true;
         this.audio?.playStinger();
@@ -60,11 +66,21 @@ export class Door {
         if (this.particles) {
           this.particles.emitStickmanDeath(this.x + this.w / 2, this.y + this.h / 2);
         }
-        // Pindah lokasi ke target (awal start atau pertengahan level)
+        const oldX = this.x;
+        const oldY = this.y;
         this.x = this.teleportTarget.x;
         this.y = this.teleportTarget.y;
         if (this.particles) {
           this.particles.emitDust(this.x + this.w / 2, this.y + this.h / 2, 12);
+        }
+
+        // PINTU YANG HANCUR DI AKHIR DIJADIKAN CHECKPOINT!
+        this.checkpoint = new Checkpoint(oldX + 4, oldY + 8);
+        this.checkpoint.activate();
+        this.audio?.playCheckpoint();
+
+        if (this.onTeleportDestroy) {
+          this.onTeleportDestroy(oldX, oldY);
         }
       }
     }
@@ -80,6 +96,11 @@ export class Door {
   }
 
   public render(ctx: CanvasRenderingContext2D): void {
+    // Render bendera checkpoint di lokasi pintu yang hancur
+    if (this.checkpoint) {
+      this.checkpoint.render(ctx);
+    }
+
     ctx.save();
     ctx.translate(this.x, this.y);
 

@@ -29,6 +29,7 @@ import { Trapdoor } from '../entities/traps/Trapdoor';
 import { FallingCeiling } from '../entities/traps/FallingCeiling';
 import { FakeSpring } from '../entities/traps/FakeSpring';
 import { ChainBomb } from '../entities/traps/ChainBomb';
+import { FallingPillar } from '../entities/traps/FallingPillar';
 import { Camera } from '../core/Camera';
 import { AudioManager } from '../core/Audio';
 import { ParticleSystem } from '../core/Particles';
@@ -316,6 +317,13 @@ export class Level implements TileMapInterface {
           }
           case 'chainBomb': {
             this.traps.push(new ChainBomb(id, ex, ey, ent.count || 5, ts, audio, camera));
+            break;
+          }
+          case 'fallingPillar': {
+            const floorY = (ent.floorY !== undefined ? ent.floorY : ent.y) * ts;
+            const pw = (ent.w || 1.5) * ts;
+            const ph = (ent.h || 7.5) * ts;
+            this.traps.push(new FallingPillar(id, ex, floorY, pw, ph, camera, audio));
             break;
           }
         }

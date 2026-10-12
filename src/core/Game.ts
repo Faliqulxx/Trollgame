@@ -105,16 +105,21 @@ export class Game {
       this.accumulator = CONFIG.PHYSICS.MAX_ACCUMULATOR;
     }
 
+    let didPhysicsStep = false;
     while (this.accumulator >= CONFIG.PHYSICS.FIXED_DELTA) {
       this.update(CONFIG.PHYSICS.FIXED_DELTA);
       this.accumulator -= CONFIG.PHYSICS.FIXED_DELTA;
+      didPhysicsStep = true;
     }
 
     // 3. Render
     this.render();
 
-    // 4. Akhiri Frame Input
-    this.input.endFrame();
+    // 4. Akhiri Frame Input HANYA jika fisika berjalan di frame ini
+    // (Mencegah input tombol lompat terhapus di monitor refresh rate tinggi / saat sub-frame)
+    if (didPhysicsStep) {
+      this.input.endFrame();
+    }
 
     requestAnimationFrame((t) => this.loop(t));
   }
@@ -146,10 +151,12 @@ export class Game {
       }
 
       case 'MENU': {
-        this.menuScene.update(fixedDt);
+        this.input.isTyping = this.menuScene.isUsernameModalOpen();
+        this.menuScene.update(fixedDt, this.input.typedKey);
         if (this.input.pointerClicked) {
           const action = this.menuScene.handleClick(this.input.pointerX, this.input.pointerY);
           if (action === 'play') {
+            this.input.isTyping = false;
             const unlocked = Storage.getUnlockedLevel();
             this.startGameAtLevel(unlocked);
           } else if (action === 'select') {

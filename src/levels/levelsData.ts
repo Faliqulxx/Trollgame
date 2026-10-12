@@ -372,17 +372,14 @@ export const LEVELS: LevelData[] = [
         count: 3
       },
 
-      // Sec 2: Closing Wall T08
+      // Sec 2: Falling Pillar (Muncul dari bawah tanah setelah dilewati, lalu tumbang ke depan menimpa pemain!)
       {
-        type: 'closingWall',
-        x: 55,
-        y: 2,
-        targetX: 85,
-        targetY: 2,
-        w: 2,
-        h: 9,
-        trigger: { x: 60, y: 9, w: 2, h: 2 },
-        speed: 130
+        type: 'fallingPillar',
+        x: 65,
+        y: 11,
+        floorY: 11,
+        w: 1.5,
+        h: 7.5
       },
 
       // Sec 3: Sliding Saw T06
@@ -397,9 +394,9 @@ export const LEVELS: LevelData[] = [
         speed: 380
       },
 
-      // Jebakan gila pasca-checkpoint:
-      // 5 langkah setelah checkpoint 1 (x: 58): Lantai bom instan!
-      { type: 'explodingFloor', x: 63, y: 11, w: 2 },
+      // Jebakan pasca-checkpoint:
+      // Setelah lolos dari pilar roboh: Lantai bom instan!
+      { type: 'explodingFloor', x: 76, y: 11, w: 2 },
       // 5 langkah setelah checkpoint 2 (x: 120): Duri muncul dari lantai!
       { type: 'hiddenSpikes', x: 125, y: 11, w: 2, trigger: { x: 123, y: 9, w: 3, h: 3 } }
     ],
@@ -411,7 +408,7 @@ export const LEVELS: LevelData[] = [
     doorTeleport: { x: 75, y: 10 },
     deathMessages: [
       'Tertusuk duri langit-langit.',
-      'Dihimpit dinding menutup.',
+      'Tertimpa pilar roboh! Lari terus jangan berhenti!',
       'Pintunya kabur ke belakang!',
       'Gergaji sergap datang dari depan!',
       'Melompatlah keluar sebelum platform sampai atap.'
@@ -423,48 +420,137 @@ export const LEVELS: LevelData[] = [
   // Jebakan: T16 (Gravity Zone), T17 (Invert Control Zone), T26 (Fake Spring)
   // Jarak Spawn (x: 2) -> Pintu (x: 172) = 5.440 px
   // =========================================================================
+  // =========================================================================
+  // LEVEL 7: Menara Pilihan (Konsep Vertikal: Memanjat Blok Bercabang)
+  // Tinggi: 42 Tile (1.344 px), Naik ke atas melalui 11 tingkat percabangan.
+  // Di setiap tingkat cabang, hanya ada 1 jalan/blok yang benar (solid).
+  // Blok yang salah adalah lantai palsu (fakeFloor / ambles) atau duri!
+  // =========================================================================
   {
     id: 7,
-    name: 'Terbalik',
+    name: 'Menara Pilihan',
     tileSize: 32,
-    grid: createGrid(180, 14, (g) => {
-      for (let r = 0; r < 14; r++) { g[r][0] = '#'; g[r][179] = '#'; }
-      fillSolidCeiling(g, 0, 179);
-      fillSolidFloor(g, 1, 178, 11);
+    grid: createGrid(50, 42, (g) => {
+      // 1. Batas Dinding & Atap Menara
+      for (let r = 0; r < 42; r++) {
+        g[r][2] = '#';
+        g[r][47] = '#';
+      }
+      for (let c = 2; c <= 47; c++) {
+        g[0][c] = '#';
+      }
 
-      g[10][3] = 'P';
-      g[10][172] = 'D';
+      // 2. Lantai Dasar
+      fillSolidFloor(g, 3, 12, 39);   // Platform spawn pemain (kiri)
+      fillSolidFloor(g, 35, 46, 39);  // Platform kanan
 
-      for (let c = 30; c <= 60; c++) g[3][c] = '#';
+      // 3. Titik Spawn Pemain (Lantai Dasar)
+      g[38][5] = 'P';
+
+      // 4. Tingkat 1 (Row 36): Kiri (Benar) vs Kanan (Salah)
+      g[36][10] = '#'; g[36][11] = '#'; g[36][12] = '#'; // BENAR
+      g[36][16] = '#'; g[36][17] = '#'; g[36][18] = '#'; // SALAH (fakeFloor)
+
+      // 5. Tingkat 2 (Row 33): Kiri (Salah) vs Tengah (Benar) vs Kanan (Salah)
+      g[33][7] = '#'; g[33][8] = '#'; g[33][9] = '#';   // SALAH (fakeFloor)
+      g[33][14] = '#'; g[33][15] = '#'; g[33][16] = '#'; // BENAR
+      g[33][21] = '#'; g[33][22] = '#'; g[33][23] = '#'; // SALAH (spikeTransformFloor)
+
+      // 6. Tingkat 3 (Row 30): Kiri (Salah) vs Kanan (Benar)
+      g[30][10] = '#'; g[30][11] = '#'; g[30][12] = '#'; // SALAH (fakeFloor)
+      g[30][19] = '#'; g[30][20] = '#'; g[30][21] = '#'; // BENAR
+
+      // 7. Tingkat 4 (Row 27): Kiri (Benar + Checkpoint 1) vs Kanan (Salah)
+      for (let c = 8; c <= 12; c++) g[27][c] = '#';       // Platform Checkpoint 1
+      g[27][14] = '#'; g[27][15] = '#'; g[27][16] = '#'; // BENAR
+      g[27][23] = '#'; g[27][24] = '#'; g[27][25] = '#'; // SALAH (fakeFloor)
+
+      // 8. Tingkat 5 (Row 24): Kiri (Salah) vs Tengah (Salah) vs Kanan (Benar)
+      g[24][10] = '#'; g[24][11] = '#'; g[24][12] = '#'; // SALAH (fakeFloor)
+      g[24][16] = '#'; g[24][17] = '#'; g[24][18] = '#'; // SALAH (crumble)
+      g[24][21] = '#'; g[24][22] = '#'; g[24][23] = '#'; // BENAR
+
+      // 9. Tingkat 6 (Row 21): Kiri (Benar) vs Kanan (Salah)
+      g[21][15] = '#'; g[21][16] = '#'; g[21][17] = '#'; // BENAR
+      g[21][24] = '#'; g[21][25] = '#'; g[21][26] = '#'; // SALAH (fakeFloor)
+
+      // 10. Tingkat 7 (Row 18): Kiri (Salah) vs Tengah (Benar) vs Kanan (Salah)
+      g[18][10] = '#'; g[18][11] = '#'; g[18][12] = '#'; // SALAH (fakeFloor)
+      g[18][17] = '#'; g[18][18] = '#'; g[18][19] = '#'; // BENAR
+      g[18][24] = '#'; g[18][25] = '#'; g[18][26] = '#'; // SALAH (spikeTransformFloor)
+
+      // 11. Tingkat 8 (Row 15): Kiri (Salah) vs Kanan (Benar + Checkpoint 2)
+      g[15][12] = '#'; g[15][13] = '#'; g[15][14] = '#'; // SALAH (fakeFloor)
+      g[15][21] = '#'; g[15][22] = '#'; g[15][23] = '#'; // BENAR
+      for (let c = 25; c <= 29; c++) g[15][c] = '#';       // Platform Checkpoint 2
+
+      // 12. Tingkat 9 (Row 12): Kiri (Benar) vs Tengah (Salah) vs Kanan (Salah)
+      g[12][16] = '#'; g[12][17] = '#'; g[12][18] = '#'; // BENAR
+      g[12][22] = '#'; g[12][23] = '#'; g[12][24] = '#'; // SALAH (fakeFloor)
+      g[12][28] = '#'; g[12][29] = '#'; g[12][30] = '#'; // SALAH (fakeFloor)
+
+      // 13. Tingkat 10 (Row 9): Kiri (Salah) vs Kanan (Benar)
+      g[9][12] = '#'; g[9][13] = '#'; g[9][14] = '#';   // SALAH (fakeFloor)
+      g[9][21] = '#'; g[9][22] = '#'; g[9][23] = '#';   // BENAR
+
+      // 14. Tingkat 11 (Row 6): Kiri (Benar) vs Kanan (Salah)
+      g[6][16] = '#'; g[6][17] = '#'; g[6][18] = '#';   // BENAR
+      g[6][24] = '#'; g[6][25] = '#'; g[6][26] = '#';   // SALAH (fakeFloor)
+
+      // 15. Puncak Menara (Row 3): Platform Puncak & Pintu Keluar
+      for (let c = 16; c <= 26; c++) g[3][c] = '#';
+      g[2][21] = 'D'; // PINTU KELUAR
     }),
     entities: [
-      // Sec 1: Gravity Zone T16
-      { type: 'gravityZone', x: 25, y: 3, w: 8, h: 7 },
-      { type: 'spikes', x: 45, y: 4, w: 4, orientation: 'down' },
+      // Duri di jurang lantai dasar (bawah blok-blok cabang)
+      { type: 'spikes', x: 13, y: 40, w: 22, orientation: 'up' },
 
-      // Sec 2: Invert Control Zone T17
-      { type: 'invertControlZone', x: 85, y: 7, w: 8, h: 4 },
-      { type: 'spikes', x: 98, y: 11, w: 4, orientation: 'up' },
+      // Tingkat 1: Blok Kanan Salah (Ambles)
+      { type: 'fakeFloor', x: 16, y: 36, w: 3 },
 
-      // Sec 3: Fake Spring T26 (Melontarkan ke duri atap)
-      { type: 'fakeSpring', x: 135, y: 11 },
-      { type: 'spikes', x: 134, y: 1, w: 4, orientation: 'down' },
+      // Tingkat 2: Blok Kiri Salah & Blok Kanan Spike Transform
+      { type: 'fakeFloor', x: 7, y: 33, w: 3 },
+      { type: 'spikeTransformFloor', x: 21, y: 33, w: 3 },
 
-      // Jebakan gila pasca-checkpoint:
-      // 5 langkah setelah checkpoint 1 (x: 65): Lantai bom instan!
-      { type: 'explodingFloor', x: 70, y: 11, w: 2 },
-      // 5 langkah setelah checkpoint 2 (x: 115): Duri muncul dari lantai!
-      { type: 'hiddenSpikes', x: 120, y: 11, w: 2, trigger: { x: 118, y: 9, w: 3, h: 3 } }
+      // Tingkat 3: Blok Kiri Salah
+      { type: 'fakeFloor', x: 10, y: 30, w: 3 },
+
+      // Tingkat 4: Blok Kanan Salah
+      { type: 'fakeFloor', x: 23, y: 27, w: 3 },
+
+      // Tingkat 5: Blok Kiri Salah & Blok Tengah Crumble Runtuh
+      { type: 'fakeFloor', x: 10, y: 24, w: 3 },
+      { type: 'crumble', x: 16, y: 24, w: 3 },
+
+      // Tingkat 6: Blok Kanan Salah
+      { type: 'fakeFloor', x: 24, y: 21, w: 3 },
+
+      // Tingkat 7: Blok Kiri Salah & Blok Kanan Spike Transform
+      { type: 'fakeFloor', x: 10, y: 18, w: 3 },
+      { type: 'spikeTransformFloor', x: 24, y: 18, w: 3 },
+
+      // Tingkat 8: Blok Kiri Salah
+      { type: 'fakeFloor', x: 12, y: 15, w: 3 },
+
+      // Tingkat 9: Blok Tengah & Kanan Salah
+      { type: 'fakeFloor', x: 22, y: 12, w: 3 },
+      { type: 'fakeFloor', x: 28, y: 12, w: 3 },
+
+      // Tingkat 10: Blok Kiri Salah
+      { type: 'fakeFloor', x: 12, y: 9, w: 3 },
+
+      // Tingkat 11: Blok Kanan Salah
+      { type: 'fakeFloor', x: 24, y: 6, w: 3 }
     ],
     checkpoints: [
-      { x: 65, y: 10 },
-      { x: 115, y: 10 }
+      { x: 9, y: 26 },   // Checkpoint 1 (Tingkat 4)
+      { x: 27, y: 14 }   // Checkpoint 2 (Tingkat 8)
     ],
     deathMessages: [
-      'Menabrak duri di atap.',
-      'Kontrol terbalik membuatmu bingung?',
-      'Pegas melontarkanmu ke bahaya.',
-      'Fokus dan sesuaikan jemarimu.'
+      'Salah pilih cabang! Yang itu lantai palsu.',
+      'Hanya ada satu jalan yang benar di setiap tingkat.',
+      'Perhatikan dan ingat-ingat cabang yang kokoh!',
+      'Hampir saja sampai puncak, coba lagi!'
     ]
   },
 
@@ -529,6 +615,13 @@ export const LEVELS: LevelData[] = [
   // Jebakan: T14 (Fake Door), T15 (Running Door), T18 (Invisible Block), T22 (Exploding Floor)
   // Jarak Spawn (x: 2) -> Pintu Asli (x: 185) = 5.760 px
   // =========================================================================
+  // =========================================================================
+  // LEVEL 9: Pintu Itu Bohong (Lebar 190 Tile / 6.080 px)
+  // Jebakan: T14 (Fake Door), T18 (Invisible Block), T22 (Exploding Floor), 
+  //          T25 (Falling Ceiling - berhenti setelah loncat!), T05 (Saw), 
+  //          T06 (Sliding Saw), T03 (Crumble), T04 (Fake Floor), T23 (Spike Transform)
+  // Jarak Spawn (x: 2) -> Pintu Asli (x: 184) = 5.760 px
+  // =========================================================================
   {
     id: 9,
     name: 'Pintu Itu Bohong',
@@ -536,36 +629,103 @@ export const LEVELS: LevelData[] = [
     grid: createGrid(190, 14, (g) => {
       for (let r = 0; r < 14; r++) { g[r][0] = '#'; g[r][189] = '#'; }
       fillSolidCeiling(g, 0, 189);
-      fillSolidFloor(g, 1, 45, 11);
-      fillSolidFloor(g, 55, 115, 11);
-      fillSolidFloor(g, 125, 188, 11);
 
-      g[10][3] = 'P';
-      g[10][185] = 'D';
+      // Seksi 1: Platform Lantai & Jurang Mini (x: 1 s.d. 45)
+      fillSolidFloor(g, 1, 19, 11);
+      // Lubang duri x: 20..21
+      fillSolidFloor(g, 22, 31, 11);
+      // Lantai runtuh x: 32..33
+      fillSolidFloor(g, 34, 45, 11);
 
-      // Pijakan jurang
+      // Jurang 1 (x: 46 s.d. 54) & Pijakan
       g[9][48] = '#'; g[9][49] = '#';
       g[9][52] = '#'; g[9][53] = '#';
+
+      // Seksi 2: Platform Lantai & Jurang Mini (x: 55 s.d. 115)
+      fillSolidFloor(g, 55, 73, 11);
+      // Pijakan melayang di atas duri x: 74..77
+      g[8][74] = '#'; g[8][75] = '#'; g[8][76] = '#';
+      fillSolidFloor(g, 78, 82, 11);
+      // Jurang mini x: 83..84
+      fillSolidFloor(g, 85, 93, 11);
+      // Jurang mini x: 94..96
+      fillSolidFloor(g, 97, 115, 11);
+
+      // Jurang 2 (x: 116 s.d. 124) & Pijakan
       g[9][118] = '#'; g[9][119] = '#';
       g[9][122] = '#'; g[9][123] = '#';
+
+      // Seksi 3: Platform Lantai & Jurang Mini Menuju Pintu (x: 125 s.d. 188)
+      fillSolidFloor(g, 125, 142, 11);
+      // Jurang mini x: 143..144 (sebelum atap jatuh)
+      fillSolidFloor(g, 145, 188, 11);
+
+      g[10][3] = 'P';
+      g[10][184] = 'D';
     }),
     entities: [
-      // Sec 1: Fake Door 1 (T14) di tile 35
-      { type: 'fakeDoor', x: 35, y: 9.5 },
+      // -----------------------------------------------------------------------
+      // SEKSI 1: Rintangan Variatif & Atap Jatuh 1
+      // -----------------------------------------------------------------------
+      { type: 'spikes', x: 12, y: 11, w: 2, orientation: 'up' },
+      { type: 'spikes', x: 20, y: 11, w: 2, orientation: 'up' },
 
-      // Sec 2: Blok Tak Terlihat T18
-      { type: 'invisibleBlock', x: 85, y: 7, w: 2, h: 1 },
-      { type: 'spikes', x: 80, y: 11, w: 5, orientation: 'up' },
+      // Atap Jatuh 1: Pemain loncat lewat duri x:20..21, mendarat di x:22..24.
+      // Harus berhenti karena atap di x:25 runtuh jatuh!
+      { type: 'fallingCeiling', x: 25, y: 1, floorY: 11, w: 2 },
 
-      // Sec 3: Lantai Meledak di depan pintu palsu 2
-      { type: 'explodingFloor', x: 135, y: 11, w: 2 },
-      { type: 'fakeDoor', x: 145, y: 9.5 },
+      // Lantai runtuh T03
+      { type: 'crumble', x: 32, y: 11, w: 2 },
 
-      // Jebakan gila pasca-checkpoint:
-      // 5 langkah setelah checkpoint 1 (x: 58): Lantai bom instan!
-      { type: 'explodingFloor', x: 63, y: 11, w: 2 },
-      // 5 langkah setelah checkpoint 2 (x: 128): Duri muncul dari lantai!
-      { type: 'hiddenSpikes', x: 133, y: 11, w: 2, trigger: { x: 131, y: 9, w: 3, h: 3 } }
+      // Fake Door 1 (T14) di tile 38
+      { type: 'fakeDoor', x: 38, y: 9.5 },
+
+      // Duri tersembunyi sebelum jurang 1
+      { type: 'hiddenSpikes', x: 43, y: 11, w: 2, trigger: { x: 41, y: 9, w: 3, h: 3 } },
+
+      // -----------------------------------------------------------------------
+      // SEKSI 2: Checkpoint 1, Duri, Atap Jatuh 2, & Gergaji Meluncur
+      // -----------------------------------------------------------------------
+      // Bom aman berjarak 8 tile dari Checkpoint 1 (x: 58)
+      { type: 'explodingFloor', x: 66, y: 11, w: 2 },
+
+      // Kolam duri dengan pijakan melayang di atasnya
+      { type: 'spikes', x: 74, y: 11, w: 4, orientation: 'up' },
+
+      // Atap Jatuh 2: Pemain loncat lewat jurang mini x:83..84, mendarat di x:85..86.
+      // Harus berhenti karena atap di x:88 langsung jatuh menimpa!
+      { type: 'fallingCeiling', x: 88, y: 1, floorY: 11, w: 2 },
+
+      // Blok Tak Terlihat T18 di atas jurang mini x:94..96
+      { type: 'invisibleBlock', x: 95, y: 7, w: 2, h: 1 },
+
+      // Gergaji Meluncur Cepat T06
+      { type: 'slidingSaw', x: 110, y: 10, targetX: 102, targetY: 10, trigger: { x: 99, y: 8, w: 3, h: 4 }, radius: 18, speed: 320 },
+
+      // Lantai Ambles T04 sebelum jurang 2
+      { type: 'fakeFloor', x: 113, y: 11, w: 2 },
+
+      // -----------------------------------------------------------------------
+      // SEKSI 3: Checkpoint 2 (BEBAS BUG TUMPANG TINDIH!), Atap Jatuh 3, & Pintu Asli
+      // -----------------------------------------------------------------------
+      // Duri tersembunyi berjarak lega 7 tile dari Checkpoint 2 (x: 128)
+      { type: 'hiddenSpikes', x: 135, y: 11, w: 2, trigger: { x: 133, y: 9, w: 3, h: 3 } },
+
+      // Atap Jatuh 3: Pemain loncat lewat jurang mini x:143..144, mendarat di x:145..146.
+      // Harus BERHENTI setelah loncat karena atap tersembunyi di x:147 jatuh berdebum!
+      { type: 'fallingCeiling', x: 147, y: 1, floorY: 11, w: 2 },
+
+      // Lantai Meledak: Diposisikan di x:154 (selisih 19 tile dari duri di x:135, TIDAK TUMPANG TINDIH!)
+      { type: 'explodingFloor', x: 154, y: 11, w: 2 },
+
+      // Fake Door 2 (T14) di tile 162
+      { type: 'fakeDoor', x: 162, y: 9.5 },
+
+      // Gergaji vertikal naik-turun T05
+      { type: 'saw', x: 170, y: 8, targetX: 170, targetY: 10, radius: 18, speed: 100 },
+
+      // Lantai Berubah Jadi Duri T23
+      { type: 'spikeTransformFloor', x: 177, y: 11, w: 2 }
     ],
     checkpoints: [
       { x: 58, y: 10 },
@@ -575,9 +735,10 @@ export const LEVELS: LevelData[] = [
     doorTeleport: { x: 6, y: 10 },
     deathMessages: [
       'Pintunya kabur balik ke titik awal!',
+      'Atap tersembunyi menimpamu! Berhentilah sejenak setelah loncat.',
       'Menabrak blok tak terlihat di atas jurang.',
       'Pintu kedua juga bohong.',
-      'Kembalilah ke awal untuk menemukan pintu asli.'
+      'Jangan terburu-buru, perhatikan sekitar!'
     ]
   },
 

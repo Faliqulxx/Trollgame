@@ -74,6 +74,17 @@ export class GameScene {
     this.hud.isPaused = false;
     this.hud.currentLevelId = data.id;
     this.particles.clear();
+
+    // Jika pintu di akhir level hancur / teleport, jadikan titik tersebut checkpoint aktif!
+    if (this.level.door) {
+      this.level.door.onTeleportDestroy = (oldX, oldY) => {
+        this.respawnX = oldX + 4;
+        this.respawnY = oldY + this.level.door!.h - this.player.height;
+        if (this.level.door!.checkpoint) {
+          this.level.checkpoints.push(this.level.door!.checkpoint);
+        }
+      };
+    }
   }
 
   public update(dt: number, input: Input): GameSceneStatus {

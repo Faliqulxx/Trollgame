@@ -25,8 +25,25 @@ export class Input {
     }
   }
 
+  // Typing mode untuk input username
+  public isTyping = false;
+  public typedKey: string | null = null;
+
   private setupKeyboard(): void {
     window.addEventListener('keydown', (e) => {
+      if (this.isTyping) {
+        if (e.key === 'Backspace' || e.key === 'Enter') {
+          e.preventDefault();
+          this.typedKey = e.key;
+          return;
+        }
+        if (e.key.length === 1) {
+          e.preventDefault();
+          this.typedKey = e.key;
+          return;
+        }
+      }
+
       // Cegah default browser scroll untuk space & arrow keys
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
         e.preventDefault();
@@ -168,6 +185,7 @@ export class Input {
     this.keysJustPressed = {};
     this.touchJumpJustPressed = false;
     this.pointerClicked = false;
+    this.typedKey = null;
   }
 
   // --- Getter Aksi Permainan ---
@@ -185,6 +203,8 @@ export class Input {
       this.keys['Space'] ||
       this.keys['ArrowUp'] ||
       this.keys['KeyW'] ||
+      this.keys['KeyZ'] ||
+      this.keys['KeyK'] ||
       this.touchJump
     );
   }
@@ -194,8 +214,19 @@ export class Input {
       this.keysJustPressed['Space'] ||
       this.keysJustPressed['ArrowUp'] ||
       this.keysJustPressed['KeyW'] ||
+      this.keysJustPressed['KeyZ'] ||
+      this.keysJustPressed['KeyK'] ||
       this.touchJumpJustPressed
     );
+  }
+
+  public consumeJump(): void {
+    delete this.keysJustPressed['Space'];
+    delete this.keysJustPressed['ArrowUp'];
+    delete this.keysJustPressed['KeyW'];
+    delete this.keysJustPressed['KeyZ'];
+    delete this.keysJustPressed['KeyK'];
+    this.touchJumpJustPressed = false;
   }
 
   public isRestartJustPressed(): boolean {

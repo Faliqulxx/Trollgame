@@ -10,11 +10,17 @@ describe('Level Validation Tests (PRD v1.1)', () => {
     expect(LEVELS.length).toBeGreaterThanOrEqual(10);
   });
 
-  it('setiap level harus memiliki lebar minimal 150 tile (≥ 4.800 px)', () => {
+  it('level horizontal harus memiliki lebar minimal 150 tile (≥ 4.800 px) dan Level 7 vertikal harus memiliki tinggi ≥ 40 tile', () => {
     for (const lvlData of LEVELS) {
       const level = new Level(lvlData);
-      expect(level.widthInTiles).toBeGreaterThanOrEqual(150);
-      expect(level.pixelWidth).toBeGreaterThanOrEqual(4800);
+      if (lvlData.id === 7) {
+        // Level 7 adalah Menara Pemanjatan Vertikal
+        expect(level.heightInTiles).toBeGreaterThanOrEqual(40);
+        expect(level.pixelHeight).toBeGreaterThanOrEqual(1280);
+      } else {
+        expect(level.widthInTiles).toBeGreaterThanOrEqual(150);
+        expect(level.pixelWidth).toBeGreaterThanOrEqual(4800);
+      }
     }
   });
 
@@ -24,16 +30,24 @@ describe('Level Validation Tests (PRD v1.1)', () => {
     expect(level10.pixelWidth).toBeGreaterThanOrEqual(9600);
   });
 
-  it('jarak horizontal antara titik spawn dan pintu keluar harus ≥ 3.800 px (≥ 4 layar)', () => {
+  it('jarak eksplorasi antara titik spawn dan pintu keluar harus ≥ 3.800 px (horizontal) atau ≥ 1.000 px (vertikal untuk Level 7)', () => {
     for (const lvlData of LEVELS) {
       const level = new Level(lvlData);
       const spawnX = level.spawnX;
+      const spawnY = level.spawnY;
 
       // Pintu biasa atau RunningDoor
       const doorX = level.door ? level.door.x : (level.runningDoor ? level.runningDoor.x : 0);
-      const distance = Math.abs(doorX - spawnX);
+      const doorY = level.door ? level.door.y : (level.runningDoor ? level.runningDoor.y : 0);
 
-      expect(distance).toBeGreaterThanOrEqual(3800);
+      if (lvlData.id === 7) {
+        // Level 7: Jarak pemanjatan vertikal dari bawah ke puncak
+        const verticalDist = Math.abs(doorY - spawnY);
+        expect(verticalDist).toBeGreaterThanOrEqual(1000);
+      } else {
+        const horizontalDist = Math.abs(doorX - spawnX);
+        expect(horizontalDist).toBeGreaterThanOrEqual(3800);
+      }
     }
   });
 
@@ -58,13 +72,12 @@ describe('Level Validation Tests (PRD v1.1)', () => {
     expect(Reach.canJump(50, -130)).toBe(false);
   });
 
-  it('LevelSelectScene harus mendukung UI 100 level dengan paginasi dan mengunci level 7-100', async () => {
+  it('LevelSelectScene harus mendukung UI 20 level, membuka level 1-10 secara progresif, dan mengunci level 11-20', async () => {
     const { LevelSelectScene } = await import('../src/scenes/LevelSelectScene');
+    const { Storage } = await import('../src/core/Storage');
     const scene = new LevelSelectScene();
 
-    // Halaman 1 (Level 1 - 20)
-    expect(scene.totalPages).toBe(5);
-    expect(scene.currentPage).toBe(0);
+    // UI Level berjumlah 20 level
     expect(scene.cards.length).toBe(20);
     expect(scene.cards[0].levelId).toBe(1);
     expect(scene.cards[19].levelId).toBe(20);
@@ -72,26 +85,49 @@ describe('Level Validation Tests (PRD v1.1)', () => {
     // Level 1 harus terbuka secara default
     expect(scene.cards[0].isUnlocked).toBe(true);
 
-    // Level 7 sampai 20 pada halaman 1 WAJIB TERKUNCI (gembok)
-    for (let i = 6; i < 20; i++) {
+    // Buka progress hingga level 10
+    Storage.unlockLevel(10);
+    scene.refreshCards();
+
+    // Level 1 sampai 10 sekarang harus terbuka
+    for (let i = 0; i < 10; i++) {
+      expect(scene.cards[i].isUnlocked).toBe(true);
+    }
+
+    // Level 11 sampai 20 WAJIB TERKUNCI (gembok)
+    for (let i = 10; i < 20; i++) {
       expect(scene.cards[i].isUnlocked).toBe(false);
     }
 
-    // Pindah ke Halaman 5 (Level 81 - 100)
-    scene.currentPage = 4;
-    scene.refreshCards();
-    expect(scene.cards.length).toBe(20);
-    expect(scene.cards[0].levelId).toBe(81);
-    expect(scene.cards[19].levelId).toBe(100);
-
-    // Semua level di halaman 5 (81-100) WAJIB TERKUNCI
-    for (const card of scene.cards) {
-      expect(card.isUnlocked).toBe(false);
-    }
-
-    // Mengklik level terkunci (misal Level 81) harus memunculkan notifikasi bayar Rp 10.000
-    const clickResult = scene.handleClick(scene.cards[0].x + 10, scene.cards[0].y + 10);
+    // Mengklik level terkunci (misal Level 11) harus memunculkan notifikasi bayar Rp 10.000
+    const clickResult = scene.handleClick(scene.cards[10].x + 10, scene.cards[10].y + 10);
     expect(clickResult).toBeNull();
-    expect(scene.lockedNoticeLevel).toBe(81);
+    expect(scene.lockedNoticeLevel).toBe(11);
+  });
+
+  it('pintu yang hancur / teleport di akhir level harus otomatis menjadi checkpoint aktif', async () => {
+    const { Door } = await import('../src/entities/Door');
+    const { Player } = await import('../src/entities/Player');
+
+    const door = new Door(500, 300, { x: 50, y: 300 });
+    const player = new Player();
+    player.spawn(480, 300); // Mendekati pintu (jarak < 85px)
+
+    expect(door.hasTeleported).toBe(false);
+    expect(door.checkpoint).toBeUndefined();
+
+    // Trigger pintu hancur / teleport
+    door.update(player);
+
+    expect(door.hasTeleported).toBe(true);
+    expect(door.x).toBe(50); // Pindah ke target teleport
+    expect(door.checkpoint).toBeDefined(); // Menjadi checkpoint di lokasi asal
+    expect(door.checkpoint!.isActivated).toBe(true); // Checkpoint aktif
+    expect(door.checkpoint!.x).toBe(504);
+    expect(door.checkpoint!.y).toBe(308);
+
+    // Saat reset (misal pemain respawn), pintu tidak balik ke lokasi awal
+    door.reset();
+    expect(door.x).toBe(50);
   });
 });

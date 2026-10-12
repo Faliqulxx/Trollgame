@@ -80,10 +80,12 @@ export class ClosingWall implements Trap {
 
   public getHitboxes(): Rect[] {
     if (!this.isTriggered) return [];
+    const spikeMargin = 8;
+    const movingRight = this.targetX > this.startX;
     return [{
-      x: this.x + 2,
+      x: movingRight ? this.x + 2 : this.x - spikeMargin,
       y: this.y + 2,
-      w: this.width - 4,
+      w: this.width + spikeMargin - 2,
       h: this.height - 4
     }];
   }
@@ -107,17 +109,45 @@ export class ClosingWall implements Trap {
     ctx.fillRect(0, 0, this.width, this.height);
     ctx.strokeRect(0, 0, this.width, this.height);
 
-    // Duri di sisi penutup
+    // Duri di sisi arah gerak penutup
     ctx.fillStyle = CONFIG.COLORS.HAZARD_RED;
     const spikeH = 8;
-    for (let py = 0; py < this.height - 10; py += 16) {
-      ctx.beginPath();
-      ctx.moveTo(0, py);
-      ctx.lineTo(-spikeH, py + 8);
-      ctx.lineTo(0, py + 16);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+    const movingRight = this.targetX > this.startX;
+    const movingDown = this.targetY > this.startY && Math.abs(this.targetY - this.startY) > Math.abs(this.targetX - this.startX);
+
+    if (movingRight) {
+      // Duri di sisi kanan menghadap arah gerak
+      for (let py = 0; py < this.height - 10; py += 16) {
+        ctx.beginPath();
+        ctx.moveTo(this.width, py);
+        ctx.lineTo(this.width + spikeH, py + 8);
+        ctx.lineTo(this.width, py + 16);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+    } else if (movingDown) {
+      // Duri di sisi bawah
+      for (let px = 0; px < this.width - 10; px += 16) {
+        ctx.beginPath();
+        ctx.moveTo(px, this.height);
+        ctx.lineTo(px + 8, this.height + spikeH);
+        ctx.lineTo(px + 16, this.height);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+    } else {
+      // Duri di sisi kiri default
+      for (let py = 0; py < this.height - 10; py += 16) {
+        ctx.beginPath();
+        ctx.moveTo(0, py);
+        ctx.lineTo(-spikeH, py + 8);
+        ctx.lineTo(0, py + 16);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
     }
 
     ctx.restore();

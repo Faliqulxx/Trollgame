@@ -1,4 +1,4 @@
-// Layar Pilih Level (Grid 100 Level dengan Paginasi & Gembok Level 7-100)
+// Layar Pilih Level (Grid 20 Level & Gembok Level 11-20)
 
 import { CONFIG } from '../config';
 import { Storage } from '../core/Storage';
@@ -18,15 +18,15 @@ export class LevelSelectScene {
   public cards: LevelCard[] = [];
   public backButton = { x: 28, y: 22, w: 110, h: 40, label: '⬅ KEMBALI' };
 
-  // Paginasi: 20 level per halaman (5 halaman total = 100 level)
+  // Total 20 Level ditampilkan dalam 1 halaman grid (4 baris x 5 kolom)
   public currentPage = 0;
-  public readonly totalPages = 5;
+  public readonly totalPages = 1;
   public readonly levelsPerPage = 20;
 
-  public prevButton = { x: 260, y: 480, w: 120, h: 38, label: '◀ SEBELUMNYA' };
-  public nextButton = { x: 580, y: 480, w: 120, h: 38, label: 'SELANJUTNYA ▶' };
+  public prevButton = { x: 260, y: 485, w: 120, h: 38, label: '◀ SEBELUMNYA' };
+  public nextButton = { x: 580, y: 485, w: 120, h: 38, label: 'SELANJUTNYA ▶' };
 
-  // Modal notifikasi bayar dev jika mengklik level terkunci (7 - 100)
+  // Modal notifikasi bayar dev jika mengklik level terkunci (Level 11 - 20 atau belum terbuka)
   public lockedNoticeLevel: number | null = null;
   private audio?: AudioManager;
 
@@ -47,8 +47,8 @@ export class LevelSelectScene {
     const gapX = 26;
     const gapY = 16;
 
-    const startLevel = this.currentPage * this.levelsPerPage + 1;
-    const endLevel = startLevel + this.levelsPerPage - 1;
+    const startLevel = 1;
+    const endLevel = 20;
 
     let indexOnPage = 0;
     for (let lvlId = startLevel; lvlId <= endLevel; lvlId++) {
@@ -58,9 +58,9 @@ export class LevelSelectScene {
       const x = startX + col * (cardW + gapX);
       const y = startY + row * (cardH + gapY);
 
-      // Level 7-100 WAJIB TERKUNCI (gembok)
-      // Level 1-6 terbuka sesuai progres pemain
-      const isUnlocked = lvlId <= 6 && lvlId <= unlockedLevel;
+      // Level 1-10 terbuka sesuai progres pemain (Level 7-10 sudah dibuka!)
+      // Level 11-20 WAJIB TERKUNCI (gembok bayar dev)
+      const isUnlocked = lvlId <= 10 && lvlId <= unlockedLevel;
       const record = save.levels[lvlId];
 
       this.cards.push({
@@ -103,7 +103,7 @@ export class LevelSelectScene {
     ctx.fillStyle = CONFIG.COLORS.STICKMAN;
     ctx.font = '900 30px Outfit, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('PILIH LEVEL', CONFIG.CANVAS_WIDTH / 2, 42);
+    ctx.fillText('PILIH LEVEL (1 - 20)', CONFIG.CANVAS_WIDTH / 2, 42);
 
     // 4. Kartu Level (Tanpa Teks Keterangan, Hanya Nomor & Gembok)
     for (const c of this.cards) {
@@ -149,48 +149,12 @@ export class LevelSelectScene {
       ctx.restore();
     }
 
-    // 5. Kontrol Paginasi Bawah
-    const startLvl = this.currentPage * this.levelsPerPage + 1;
-    const endLvl = startLvl + this.levelsPerPage - 1;
-
-    // Tombol Prev
-    const hasPrev = this.currentPage > 0;
-    ctx.fillStyle = hasPrev ? '#ffffff' : '#e0ddd5';
-    ctx.strokeStyle = hasPrev ? CONFIG.COLORS.STICKMAN : '#bbb';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(this.prevButton.x, this.prevButton.y, this.prevButton.w, this.prevButton.h, 8);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = hasPrev ? CONFIG.COLORS.STICKMAN : '#999';
+    // Catatan Info Bawah
+    ctx.fillStyle = '#777785';
     ctx.font = 'bold 13px Outfit, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(this.prevButton.label, this.prevButton.x + this.prevButton.w / 2, this.prevButton.y + this.prevButton.h / 2 + 1);
-
-    // Indikator Halaman
-    ctx.fillStyle = CONFIG.COLORS.TEXT_DARK;
-    ctx.font = 'bold 15px Outfit, sans-serif';
-    ctx.fillText(
-      `Halaman ${this.currentPage + 1} / ${this.totalPages}  (Lv ${startLvl} - ${endLvl})`,
-      CONFIG.CANVAS_WIDTH / 2,
-      this.prevButton.y + this.prevButton.h / 2 + 1
-    );
-
-    // Tombol Next
-    const hasNext = this.currentPage < this.totalPages - 1;
-    ctx.fillStyle = hasNext ? '#ffffff' : '#e0ddd5';
-    ctx.strokeStyle = hasNext ? CONFIG.COLORS.STICKMAN : '#bbb';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(this.nextButton.x, this.nextButton.y, this.nextButton.w, this.nextButton.h, 8);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = hasNext ? CONFIG.COLORS.STICKMAN : '#999';
-    ctx.font = 'bold 13px Outfit, sans-serif';
-    ctx.fillText(this.nextButton.label, this.nextButton.x + this.nextButton.w / 2, this.nextButton.y + this.nextButton.h / 2 + 1);
+    ctx.fillText('Level 1 - 10 Tersedia Gratis  •  Level 11 - 20 Terkunci (Hubungi Dev)', CONFIG.CANVAS_WIDTH / 2, 495);
 
     // 6. Modal Pop-up Notifikasi jika mengklik level terkunci
     if (this.lockedNoticeLevel !== null) {
