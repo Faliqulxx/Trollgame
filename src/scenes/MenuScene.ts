@@ -11,7 +11,9 @@ export class MenuScene {
   public buttons = [
     { id: 'play', x: 0, y: 0, w: 260, h: 50, label: '▶ MAIN' },
     { id: 'select', x: 0, y: 0, w: 260, h: 46, label: '📜 PILIH LEVEL' },
-    { id: 'audio', x: 0, y: 0, w: 260, h: 46, label: '🔊 SUARA: AKTIF' },
+    { id: 'audio_down', x: 0, y: 0, w: 46, h: 46, label: '➖' },
+    { id: 'audio', x: 0, y: 0, w: 156, h: 46, label: '🔊 SUARA: 80%' },
+    { id: 'audio_up', x: 0, y: 0, w: 46, h: 46, label: '➕' },
     { id: 'reset', x: 0, y: 0, w: 260, h: 42, label: '↺ RESET PROGRES' }
   ];
 
@@ -31,16 +33,27 @@ export class MenuScene {
     this.buttons[1].x = cx;
     this.buttons[1].y = startY + spacing;
 
+    // Baris Kontrol Volume: [-] [ 🔊 SUARA: 80% ] [+]
+    const audioY = startY + spacing * 2;
     this.buttons[2].x = cx;
-    this.buttons[2].y = startY + spacing * 2;
+    this.buttons[2].y = audioY;
 
-    this.buttons[3].x = cx;
-    this.buttons[3].y = startY + spacing * 3;
+    this.buttons[3].x = cx + 52;
+    this.buttons[3].y = audioY;
+
+    this.buttons[4].x = cx + 52 + 162;
+    this.buttons[4].y = audioY;
+
+    // Reset Progres
+    this.buttons[5].x = cx;
+    this.buttons[5].y = startY + spacing * 3;
   }
 
   public update(dt: number): void {
     this.animTimer += dt;
-    this.buttons[2].label = this.audio.getMuted() ? '🔇 SUARA: MATI' : '🔊 SUARA: AKTIF';
+    const vol = this.audio.getVolumePercent();
+    const muted = this.audio.getMuted() || vol <= 0;
+    this.buttons[3].label = muted ? '🔇 SUARA: 0%' : `🔊 SUARA: ${vol}%`;
   }
 
   public render(ctx: CanvasRenderingContext2D): void {

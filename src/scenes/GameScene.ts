@@ -285,7 +285,8 @@ export class GameScene {
       `LV ${this.level.id}`,
       this.deathsInRun,
       this.levelTime,
-      this.audio.getMuted()
+      this.audio.getMuted(),
+      this.audio.getVolumePercent()
     );
 
     // Tampilkan label debug jika aktif
@@ -298,6 +299,24 @@ export class GameScene {
 
   public handlePointerClick(screenX: number, screenY: number): 'next_level' | 'menu' | null {
     const action = this.hud.getClickedAction(screenX, screenY);
+
+    if (action === 'volume_down') {
+      this.audio.decreaseVolume(0.1);
+      return null;
+    }
+
+    if (action === 'volume_up') {
+      this.audio.increaseVolume(0.1);
+      return null;
+    }
+
+    if (action && action.startsWith('volume_set:')) {
+      const ratio = parseFloat(action.split(':')[1]);
+      if (!isNaN(ratio)) {
+        this.audio.setVolume(ratio);
+      }
+      return null;
+    }
 
     if (action === 'restart' || action === 'restart_modal') {
       this.hud.isPaused = false;
@@ -319,7 +338,7 @@ export class GameScene {
     }
 
     if (action === 'audio') {
-      this.audio.toggleMute();
+      this.audio.cycleVolume();
       return null;
     }
 

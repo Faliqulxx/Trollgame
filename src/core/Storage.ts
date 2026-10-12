@@ -37,6 +37,7 @@ export class Storage {
 
   public static load(): SaveData {
     try {
+      if (typeof localStorage === 'undefined') return { ...Storage.defaultData };
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return { ...Storage.defaultData };
       const parsed = JSON.parse(raw);
@@ -53,6 +54,7 @@ export class Storage {
 
   public static save(): void {
     try {
+      if (typeof localStorage === 'undefined') return;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(Storage.data));
     } catch (e) {
       console.warn('Gagal menyimpan ke localStorage:', e);

@@ -375,14 +375,100 @@ export class AudioManager {
     }, 200);
   }
 
+  public getVolume(): number {
+    return this.isMuted ? 0 : this.getSFXGain();
+  }
+
+  public getVolumePercent(): number {
+    return Math.round(this.getVolume() * 100);
+  }
+
+  public setVolume(vol: number): void {
+    const clamped = Math.max(0, Math.min(1, Math.round(vol * 100) / 100));
+    if (clamped <= 0.01) {
+      this.isMuted = true;
+      if (this.currentDeathAudio) {
+        try {
+          this.currentDeathAudio.pause();
+        } catch {}
+      }
+    } else {
+      this.isMuted = false;
+    }
+
+    Storage.updateSettings({
+      sfx: clamped,
+      music: clamped * 0.5
+    });
+
+    if (this.currentDeathAudio) {
+      this.currentDeathAudio.volume = Math.max(0, Math.min(1, 0.9 * clamped));
+    }
+
+    this.playFeedback();
+  }
+
+  public decreaseVolume(step = 0.1): number {
+    const current = this.isMuted ? 0 : this.getSFXGain();
+    const next = Math.max(0, current - step);
+    this.setVolume(next);
+    return next;
+  }
+
+  public increaseVolume(step = 0.1): number {
+    const current = this.isMuted ? 0 : this.getSFXGain();
+    const next = Math.min(1, current + step);
+    this.setVolume(next);
+    return next;
+  }
+
+  public cycleVolume(): number {
+    // Berputar: 100% -> 70% -> 40% -> 10% -> 0% (Mute) -> 100%
+    const current = this.isMuted ? 0 : this.getSFXGain();
+    let next: number;
+    if (current <= 0.05) next = 1.0;
+    else if (current <= 0.25) next = 0.0;
+    else if (current <= 0.55) next = 0.2;
+    else if (current <= 0.85) next = 0.5;
+    else next = 0.8;
+    this.setVolume(next);
+    return next;
+  }
+
+  public playFeedback(): void {
+    if (!this.ctx || this.isMuted) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(680, now + 0.06);
+      gain.gain.setValueAtTime(0.2 * this.getSFXGain(), now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.08);
+    } catch {}
+  }
+
   public toggleMute(): boolean {
     this.isMuted = !this.isMuted;
-    if (this.isMuted && this.currentDeathAudio) {
-      try {
-        this.currentDeathAudio.pause();
-      } catch {
-        // Ignore
+    if (this.isMuted) {
+      if (this.currentDeathAudio) {
+        try {
+          this.currentDeathAudio.pause();
+        } catch {
+          // Ignore
+        }
       }
+    } else {
+      // Jika di-unmute tapi volume saat ini 0, naikkan ke 0.5
+      if (this.getSFXGain() <= 0.05) {
+        Storage.updateSettings({ sfx: 0.5, music: 0.25 });
+      }
+      this.playFeedback();
     }
     return this.isMuted;
   }
@@ -391,3 +477,4 @@ export class AudioManager {
     return this.isMuted;
   }
 }
+

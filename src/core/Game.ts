@@ -155,8 +155,12 @@ export class Game {
           } else if (action === 'select') {
             this.levelSelectScene.refreshCards();
             this.state = 'LEVEL_SELECT';
+          } else if (action === 'audio_down') {
+            this.audio.decreaseVolume(0.1);
+          } else if (action === 'audio_up') {
+            this.audio.increaseVolume(0.1);
           } else if (action === 'audio') {
-            this.audio.toggleMute();
+            this.audio.cycleVolume();
           } else if (action === 'reset') {
             if (confirm('Apakah kamu yakin ingin mereset seluruh progres level?')) {
               Storage.resetProgress();
