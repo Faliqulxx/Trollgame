@@ -11,10 +11,10 @@ export class IntroScene {
   private timer = 0;
 
   // Tombol troll "KELUAR SEBELUM TERLAMBAT"
-  private escapeX = 508;
-  private escapeY = 442;
-  private escapeTargetX = 508;
-  private escapeTargetY = 442;
+  private escapeX = 518;
+  private escapeY = 404;
+  private escapeTargetX = 518;
+  private escapeTargetY = 404;
   private trollDodges = 0;
   private showTrollMessage = false;
   private trollMessageTimer = 0;
@@ -22,12 +22,12 @@ export class IntroScene {
   constructor(audio: AudioManager) {
     this.audio = audio;
     this.img = new Image();
-    this.img.src = '/intro.png';
+    this.img.src = encodeURI('/Peringatan Game_ Siap Menderita!.png');
     this.img.onload = () => {
       this.isLoaded = true;
     };
     this.img.onerror = () => {
-      this.img.src = '/Peringatan Game_ Siap Menderita_.png';
+      this.img.src = '/intro.png';
     };
   }
 
@@ -44,21 +44,21 @@ export class IntroScene {
       }
     }
 
-    // Efek troll: tombol "KELUAR SEBELUM TERLAMBAT" kabur saat kursor mendekat (< 65px)
-    const escapeCenterX = this.escapeX + 62;
-    const escapeCenterY = this.escapeY + 25;
+    // Efek troll: tombol "KELUAR SEBELUM TERLAMBAT" kabur saat kursor mendekat (< 75px)
+    const escapeCenterX = this.escapeX + 98;
+    const escapeCenterY = this.escapeY + 32;
     const dist = Math.hypot(pointerX - escapeCenterX, pointerY - escapeCenterY);
 
-    if (dist < 65) {
+    if (dist < 75) {
       const angles = [Math.PI * 0.25, Math.PI * 0.75, -Math.PI * 0.25, -Math.PI * 0.75, 0, Math.PI];
       const randomAngle = angles[Math.floor(Math.random() * angles.length)];
-      const jumpDist = 80 + Math.random() * 50;
+      const jumpDist = 90 + Math.random() * 60;
 
       let nextX = this.escapeX + Math.cos(randomAngle) * jumpDist;
       let nextY = this.escapeY + Math.sin(randomAngle) * jumpDist;
 
-      nextX = Math.max(480, Math.min(CONFIG.CANVAS_WIDTH - 150, nextX));
-      nextY = Math.max(370, Math.min(CONFIG.CANVAS_HEIGHT - 65, nextY));
+      nextX = Math.max(480, Math.min(CONFIG.CANVAS_WIDTH - 210, nextX));
+      nextY = Math.max(340, Math.min(CONFIG.CANVAS_HEIGHT - 80, nextY));
 
       this.escapeTargetX = nextX;
       this.escapeTargetY = nextY;
@@ -78,6 +78,8 @@ export class IntroScene {
     ctx.globalAlpha = this.alpha;
 
     if (this.isLoaded) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(this.img, 0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
     } else {
       ctx.fillStyle = CONFIG.COLORS.BG_PAPER;
@@ -90,9 +92,9 @@ export class IntroScene {
     }
 
     // Highlight denyut halus di sekitar tombol "SAYA SIAP MENDERITA"
-    const btnReadyX = 245;
-    const btnReadyY = 420;
-    const btnReadyW = 215;
+    const btnReadyX = 254;
+    const btnReadyY = 390;
+    const btnReadyW = 236;
     const btnReadyH = 80;
 
     const isHoverReady = this.isHoveringReadyButton(pointerX, pointerY);
@@ -109,9 +111,9 @@ export class IntroScene {
     // Jika tombol kabur sudah berpindah posisi, tutupi posisi awal dan gambar tombol di posisi baru
     if (this.trollDodges > 0) {
       // Tutup posisi asal
-      ctx.fillStyle = '#f8f6f0';
+      ctx.fillStyle = '#f6f3eb';
       ctx.beginPath();
-      ctx.roundRect(508, 442, 125, 50, 14);
+      ctx.roundRect(518, 404, 196, 64, 16);
       ctx.fill();
 
       // Gambar tombol yang kabur di koordinat baru
@@ -120,16 +122,16 @@ export class IntroScene {
       ctx.strokeStyle = '#888';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(this.escapeX, this.escapeY, 125, 50, 14);
+      ctx.roundRect(this.escapeX, this.escapeY, 196, 64, 16);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = '#333';
-      ctx.font = 'bold 11px Outfit, sans-serif';
+      ctx.font = 'bold 12px Outfit, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('KELUAR SEBELUM', this.escapeX + 62, this.escapeY + 20);
-      ctx.fillText('TERLAMBAT', this.escapeX + 62, this.escapeY + 34);
+      ctx.fillText('KELUAR SEBELUM', this.escapeX + 98, this.escapeY + 26);
+      ctx.fillText('TERLAMBAT', this.escapeX + 98, this.escapeY + 44);
       ctx.restore();
     }
 
@@ -140,7 +142,7 @@ export class IntroScene {
       ctx.strokeStyle = '#18181c';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.roundRect(this.escapeX - 10, this.escapeY - 32, 145, 26, 6);
+      ctx.roundRect(this.escapeX + 23, this.escapeY - 32, 150, 26, 6);
       ctx.fill();
       ctx.stroke();
 
@@ -148,7 +150,7 @@ export class IntroScene {
       ctx.font = 'bold 12px Outfit, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('Eits, gak bisa kabur! 😜', this.escapeX + 62, this.escapeY - 18);
+      ctx.fillText('Eits, gak bisa kabur! 😜', this.escapeX + 98, this.escapeY - 18);
       ctx.restore();
     }
 
@@ -156,9 +158,9 @@ export class IntroScene {
   }
 
   public isHoveringReadyButton(px: number, py: number): boolean {
-    const btnReadyX = 245;
-    const btnReadyY = 420;
-    const btnReadyW = 215;
+    const btnReadyX = 254;
+    const btnReadyY = 390;
+    const btnReadyW = 236;
     const btnReadyH = 80;
     return px >= btnReadyX && px <= btnReadyX + btnReadyW &&
            py >= btnReadyY && py <= btnReadyY + btnReadyH;
