@@ -176,7 +176,13 @@ export class Input {
     canvas.addEventListener('touchend', () => {
       this.pointerDown = false;
     });
+
+    canvas.addEventListener('wheel', (e) => {
+      this.wheelDeltaY += e.deltaY;
+    }, { passive: true });
   }
+
+  public wheelDeltaY = 0;
 
   /**
    * Panggil di akhir frame untuk mereset just pressed status
@@ -186,6 +192,7 @@ export class Input {
     this.touchJumpJustPressed = false;
     this.pointerClicked = false;
     this.typedKey = null;
+    this.wheelDeltaY = 0;
   }
 
   // --- Getter Aksi Permainan ---

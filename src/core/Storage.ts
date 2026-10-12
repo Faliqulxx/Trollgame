@@ -27,6 +27,8 @@ export interface SaveData {
   };
 }
 
+import { generateDefaultLeaderboard } from './LeaderboardData';
+
 const STORAGE_KEY = 'stickman_trapdoor_save';
 
 export class Storage {
@@ -36,12 +38,7 @@ export class Storage {
     unlockedLevel: 1,
     levels: {},
     totalDeaths: 0,
-    leaderboard: [
-      { username: 'Dev FREEKS', maxLevel: 6, totalDeaths: 0, updatedAt: 1728000000000 },
-      { username: 'Pro Master', maxLevel: 5, totalDeaths: 12, updatedAt: 1728000000000 },
-      { username: 'Si Paling Sabar', maxLevel: 4, totalDeaths: 35, updatedAt: 1728000000000 },
-      { username: 'Korban Jebakan', maxLevel: 2, totalDeaths: 64, updatedAt: 1728000000000 }
-    ],
+    leaderboard: generateDefaultLeaderboard(),
     settings: {
       sfx: 0.8,
       music: 0.4,
@@ -57,10 +54,38 @@ export class Storage {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return { ...Storage.defaultData };
       const parsed = JSON.parse(raw);
+
+      // Pastikan leaderboard memiliki 300 orang & tidak ada yang mati kurang dari 38
+      let lb: LeaderboardEntry[] = Array.isArray(parsed.leaderboard) ? parsed.leaderboard : [];
+      const needsMigration = lb.length < 300 || lb.some(e => e.totalDeaths < 38);
+
+      if (needsMigration) {
+        const fresh300 = generateDefaultLeaderboard();
+        // Pertahankan profil pengguna aktif jika sudah ada
+        const currentUserName = (parsed.username || '').trim().toLowerCase();
+        const userEntry = lb.find(e => e.username.toLowerCase() === currentUserName);
+
+        if (userEntry) {
+          // Gantikan salah satu bot dengan entri user
+          const filtered = fresh300.filter(e => e.username.toLowerCase() !== currentUserName);
+          lb = [userEntry, ...filtered.slice(0, 299)];
+        } else {
+          lb = fresh300;
+        }
+
+        // Simpan langsung ke localStorage agar ter-upgrade
+        parsed.leaderboard = lb;
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...Storage.defaultData, ...parsed, leaderboard: lb }));
+        } catch {
+          // ignore
+        }
+      }
+
       return {
         ...Storage.defaultData,
         ...parsed,
-        leaderboard: Array.isArray(parsed.leaderboard) && parsed.leaderboard.length > 0 ? parsed.leaderboard : Storage.defaultData.leaderboard,
+        leaderboard: lb,
         settings: { ...Storage.defaultData.settings, ...(parsed.settings || {}) },
         levels: { ...Storage.defaultData.levels, ...(parsed.levels || {}) }
       };
@@ -203,7 +228,12 @@ export class Storage {
 
   public static resetProgress(): void {
     const currentName = Storage.data.username;
-    Storage.data = { ...Storage.defaultData, username: currentName, levels: {} };
+    Storage.data = {
+      ...Storage.defaultData,
+      username: currentName,
+      levels: {},
+      leaderboard: generateDefaultLeaderboard()
+    };
     Storage.save();
   }
 }

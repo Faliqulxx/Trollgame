@@ -152,7 +152,7 @@ export class Game {
 
       case 'MENU': {
         this.input.isTyping = this.menuScene.isUsernameModalOpen();
-        this.menuScene.update(fixedDt, this.input.typedKey);
+        this.menuScene.update(fixedDt, this.input.typedKey, this.input.wheelDeltaY);
         if (this.input.pointerClicked) {
           const action = this.menuScene.handleClick(this.input.pointerX, this.input.pointerY);
           if (action === 'play') {

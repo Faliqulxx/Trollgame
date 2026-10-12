@@ -37,15 +37,26 @@ describe('Username & Leaderboard System', () => {
     expect(indexA).toBeLessThan(indexB);
   });
 
-  it('mengurutkan leaderboard dengan kematian tersedikit jika level sama', () => {
-    const rawData = Storage.getData();
-    rawData.leaderboard = [
-      { username: 'BanyakMati', maxLevel: 3, totalDeaths: 50, updatedAt: 1000 },
-      { username: 'SedikitMati', maxLevel: 3, totalDeaths: 5, updatedAt: 2000 }
-    ];
-
+  it('leaderboard memiliki minimal 300 orang bot/pemain unik', () => {
     const leaderboard = Storage.getLeaderboard();
-    expect(leaderboard[0].username).toBe('SedikitMati');
-    expect(leaderboard[1].username).toBe('BanyakMati');
+    expect(leaderboard.length).toBeGreaterThanOrEqual(300);
+  });
+
+  it('tidak ada satupun pemain di leaderboard yang mati kurang dari 38', () => {
+    const leaderboard = Storage.getLeaderboard();
+    for (const entry of leaderboard) {
+      expect(entry.totalDeaths).toBeGreaterThanOrEqual(38);
+    }
+  });
+
+  it('pemain dengan level top memiliki rata-rata kematian yang lebih banyak dibandingkan level rendah', () => {
+    const leaderboard = Storage.getLeaderboard();
+    const topTier = leaderboard.filter(e => e.maxLevel >= 9);
+    const bottomTier = leaderboard.filter(e => e.maxLevel <= 2);
+
+    const avgTopDeaths = topTier.reduce((sum, e) => sum + e.totalDeaths, 0) / topTier.length;
+    const avgBottomDeaths = bottomTier.reduce((sum, e) => sum + e.totalDeaths, 0) / bottomTier.length;
+
+    expect(avgTopDeaths).toBeGreaterThan(avgBottomDeaths);
   });
 });

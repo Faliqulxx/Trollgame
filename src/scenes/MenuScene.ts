@@ -77,17 +77,30 @@ export class MenuScene {
     this.buttons[6].y = startY + spacing * 4;
   }
 
+  public leaderboardPage = 0;
+  public readonly leaderboardPerPage = 6;
+
   public isUsernameModalOpen(): boolean {
     return this.showUsernameModal;
   }
 
-  public update(dt: number, typedKey: string | null = null): void {
+  public update(dt: number, typedKey: string | null = null, wheelDeltaY = 0): void {
     this.animTimer += dt;
     this.cursorBlinkTimer += dt;
 
     const vol = this.audio.getVolumePercent();
     const muted = this.audio.getMuted() || vol <= 0;
     this.buttons[4].label = muted ? '🔇 SUARA: 0%' : `🔊 SUARA: ${vol}%`;
+
+    // Handle scroll wheel di modal leaderboard
+    if (this.showLeaderboardModal && wheelDeltaY !== 0) {
+      const totalPages = Math.ceil(Storage.getLeaderboard().length / this.leaderboardPerPage);
+      if (wheelDeltaY > 0) {
+        this.leaderboardPage = Math.min(totalPages - 1, this.leaderboardPage + 1);
+      } else if (wheelDeltaY < 0) {
+        this.leaderboardPage = Math.max(0, this.leaderboardPage - 1);
+      }
+    }
 
     // Handle pengetikan keyboard jika modal username aktif
     if (this.showUsernameModal && typedKey) {
@@ -396,8 +409,8 @@ export class MenuScene {
     ctx.fillStyle = 'rgba(15, 15, 20, 0.75)';
     ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
 
-    const mw = 560;
-    const mh = 420;
+    const mw = 580;
+    const mh = 450;
     const mx = (CONFIG.CANVAS_WIDTH - mw) / 2;
     const my = (CONFIG.CANVAS_HEIGHT - mh) / 2;
 
@@ -414,40 +427,46 @@ export class MenuScene {
     ctx.fillStyle = '#d9480f';
     ctx.font = '900 24px Outfit, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('🏆 PAPAN PERINGKAT TROLL', CONFIG.CANVAS_WIDTH / 2, my + 38);
+    ctx.fillText('🏆 PAPAN PERINGKAT TROLL', CONFIG.CANVAS_WIDTH / 2, my + 34);
 
     ctx.fillStyle = '#555';
     ctx.font = '600 13px Outfit, sans-serif';
-    ctx.fillText('Peringkat berdasarkan Level Tertinggi & Total Kematian Tersedikit', CONFIG.CANVAS_WIDTH / 2, my + 64);
+    ctx.fillText('Peringkat berdasarkan Level Tertinggi & Pejuang Kematian Terbanyak', CONFIG.CANVAS_WIDTH / 2, my + 56);
 
     // Table Header
-    const tableX = mx + 25;
-    const tableY = my + 86;
-    const tableW = mw - 50;
+    const tableX = mx + 20;
+    const tableY = my + 74;
+    const tableW = mw - 40;
 
     ctx.fillStyle = '#2b2b36';
     ctx.beginPath();
-    ctx.roundRect(tableX, tableY, tableW, 32, 6);
+    ctx.roundRect(tableX, tableY, tableW, 30, 6);
     ctx.fill();
 
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 13px Outfit, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('POS', tableX + 16, tableY + 16);
-    ctx.fillText('NAMA PEMAIN', tableX + 75, tableY + 16);
+    ctx.fillText('POS', tableX + 14, tableY + 15);
+    ctx.fillText('NAMA PEMAIN', tableX + 75, tableY + 15);
     ctx.textAlign = 'center';
-    ctx.fillText('LEVEL', tableX + 320, tableY + 16);
-    ctx.fillText('TOTAL MATI', tableX + 430, tableY + 16);
+    ctx.fillText('LEVEL', tableX + 340, tableY + 15);
+    ctx.fillText('TOTAL MATI', tableX + 460, tableY + 15);
 
-    // Leaderboard Data
-    const list = Storage.getLeaderboard().slice(0, 6);
+    // Leaderboard Data dengan Paginasi 300 Entri
+    const allList = Storage.getLeaderboard();
+    const totalPages = Math.max(1, Math.ceil(allList.length / this.leaderboardPerPage));
+    this.leaderboardPage = Math.max(0, Math.min(totalPages - 1, this.leaderboardPage));
+
+    const startIdx = this.leaderboardPage * this.leaderboardPerPage;
+    const pageItems = allList.slice(startIdx, startIdx + this.leaderboardPerPage);
     const currentUser = Storage.getUsername();
     const rowH = 34;
 
-    for (let i = 0; i < list.length; i++) {
-      const entry = list[i];
-      const ry = tableY + 38 + i * (rowH + 4);
+    for (let i = 0; i < pageItems.length; i++) {
+      const entry = pageItems[i];
+      const rank = startIdx + i + 1;
+      const ry = tableY + 34 + i * (rowH + 4);
       const isMe = currentUser && entry.username.toLowerCase() === currentUser.toLowerCase();
 
       ctx.fillStyle = isMe ? '#eef2ff' : (i % 2 === 0 ? '#f8f9fa' : '#ffffff');
@@ -459,15 +478,15 @@ export class MenuScene {
       ctx.stroke();
 
       // Medal / Rank Number
-      let medal = `#${i + 1}`;
-      if (i === 0) medal = '🥇 1';
-      else if (i === 1) medal = '🥈 2';
-      else if (i === 2) medal = '🥉 3';
+      let medal = `#${rank}`;
+      if (rank === 1) medal = '🥇 1';
+      else if (rank === 2) medal = '🥈 2';
+      else if (rank === 3) medal = '🥉 3';
 
-      ctx.fillStyle = i === 0 ? '#d97706' : '#374151';
+      ctx.fillStyle = rank === 1 ? '#d97706' : (rank <= 3 ? '#2563eb' : '#374151');
       ctx.font = 'bold 13px Outfit, sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(medal, tableX + 14, ry + rowH / 2);
+      ctx.fillText(medal, tableX + 12, ry + rowH / 2);
 
       // Nama Pemain
       ctx.fillStyle = isMe ? '#3730a3' : '#1f2937';
@@ -478,19 +497,81 @@ export class MenuScene {
       ctx.fillStyle = '#059669';
       ctx.font = 'bold 14px Outfit, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`LV ${entry.maxLevel}`, tableX + 320, ry + rowH / 2);
+      ctx.fillText(`LV ${entry.maxLevel}`, tableX + 340, ry + rowH / 2);
 
       // Total Deaths
       ctx.fillStyle = CONFIG.COLORS.HAZARD_RED;
       ctx.font = 'bold 14px Outfit, sans-serif';
-      ctx.fillText(`${entry.totalDeaths}x ☠`, tableX + 430, ry + rowH / 2);
+      ctx.fillText(`${entry.totalDeaths}x ☠`, tableX + 460, ry + rowH / 2);
     }
 
+    // Navigasi Paginasi (Prev / Next / Posisi Saya)
+    const navY = my + 346;
+
+    // Tombol Prev
+    const prevBtnX = mx + 25;
+    const prevBtnW = 80;
+    const prevBtnH = 30;
+    const canPrev = this.leaderboardPage > 0;
+    ctx.fillStyle = canPrev ? '#ffffff' : '#f3f4f6';
+    ctx.strokeStyle = canPrev ? CONFIG.COLORS.STICKMAN : '#d1d5db';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(prevBtnX, navY, prevBtnW, prevBtnH, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = canPrev ? CONFIG.COLORS.TEXT_DARK : '#9ca3af';
+    ctx.font = 'bold 12px Outfit, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('◀ PREV', prevBtnX + prevBtnW / 2, navY + prevBtnH / 2 + 1);
+
+    // Tombol Posisi Saya
+    const meBtnX = mx + (mw - 140) / 2;
+    const meBtnW = 140;
+    const meBtnH = 30;
+    ctx.fillStyle = '#eef2ff';
+    ctx.strokeStyle = '#4f46e5';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(meBtnX, navY, meBtnW, meBtnH, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#3730a3';
+    ctx.font = 'bold 12px Outfit, sans-serif';
+    ctx.fillText('👤 POSISI SAYA', meBtnX + meBtnW / 2, navY + meBtnH / 2 + 1);
+
+    // Tombol Next
+    const nextBtnX = mx + mw - 105;
+    const nextBtnW = 80;
+    const nextBtnH = 30;
+    const canNext = this.leaderboardPage < totalPages - 1;
+    ctx.fillStyle = canNext ? '#ffffff' : '#f3f4f6';
+    ctx.strokeStyle = canNext ? CONFIG.COLORS.STICKMAN : '#d1d5db';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(nextBtnX, navY, nextBtnW, nextBtnH, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = canNext ? CONFIG.COLORS.TEXT_DARK : '#9ca3af';
+    ctx.font = 'bold 12px Outfit, sans-serif';
+    ctx.fillText('NEXT ▶', nextBtnX + nextBtnW / 2, navY + nextBtnH / 2 + 1);
+
+    // Keterangan Halaman
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '500 12px Outfit, sans-serif';
+    ctx.textAlign = 'center';
+    const endRank = Math.min(allList.length, startIdx + pageItems.length);
+    ctx.fillText(
+      `Halaman ${this.leaderboardPage + 1} / ${totalPages}  (#${startIdx + 1} - #${endRank} dari ${allList.length} Pemain)`,
+      CONFIG.CANVAS_WIDTH / 2,
+      navY + 44
+    );
+
     // Tombol Tutup Modal
-    const closeBtnX = mx + (mw - 160) / 2;
-    const closeBtnY = my + mh - 54;
-    const closeBtnW = 160;
-    const closeBtnH = 38;
+    const closeBtnX = mx + (mw - 150) / 2;
+    const closeBtnY = my + mh - 44;
+    const closeBtnW = 150;
+    const closeBtnH = 34;
 
     ctx.fillStyle = CONFIG.COLORS.STICKMAN;
     ctx.beginPath();
@@ -498,7 +579,7 @@ export class MenuScene {
     ctx.fill();
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 15px Outfit, sans-serif';
+    ctx.font = 'bold 14px Outfit, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('TUTUP ✖', CONFIG.CANVAS_WIDTH / 2, closeBtnY + closeBtnH / 2 + 1);
 
@@ -553,15 +634,55 @@ export class MenuScene {
 
     // 2. Jika Modal Leaderboard Aktif
     if (this.showLeaderboardModal) {
-      const mw = 560;
-      const mh = 420;
+      const mw = 580;
+      const mh = 450;
       const mx = (CONFIG.CANVAS_WIDTH - mw) / 2;
       const my = (CONFIG.CANVAS_HEIGHT - mh) / 2;
+      const navY = my + 346;
 
-      const closeBtnX = mx + (mw - 160) / 2;
-      const closeBtnY = my + mh - 54;
-      const closeBtnW = 160;
-      const closeBtnH = 38;
+      const allList = Storage.getLeaderboard();
+      const totalPages = Math.max(1, Math.ceil(allList.length / this.leaderboardPerPage));
+
+      // Tombol Prev
+      const prevBtnX = mx + 25;
+      const prevBtnW = 80;
+      const prevBtnH = 30;
+      if (px >= prevBtnX && px <= prevBtnX + prevBtnW && py >= navY && py <= navY + prevBtnH) {
+        if (this.leaderboardPage > 0) {
+          this.leaderboardPage--;
+        }
+        return null;
+      }
+
+      // Tombol Posisi Saya
+      const meBtnX = mx + (mw - 140) / 2;
+      const meBtnW = 140;
+      const meBtnH = 30;
+      if (px >= meBtnX && px <= meBtnX + meBtnW && py >= navY && py <= navY + meBtnH) {
+        const currentUser = Storage.getUsername().toLowerCase();
+        const userIdx = allList.findIndex(e => e.username.toLowerCase() === currentUser);
+        if (userIdx !== -1) {
+          this.leaderboardPage = Math.floor(userIdx / this.leaderboardPerPage);
+        }
+        return null;
+      }
+
+      // Tombol Next
+      const nextBtnX = mx + mw - 105;
+      const nextBtnW = 80;
+      const nextBtnH = 30;
+      if (px >= nextBtnX && px <= nextBtnX + nextBtnW && py >= navY && py <= navY + nextBtnH) {
+        if (this.leaderboardPage < totalPages - 1) {
+          this.leaderboardPage++;
+        }
+        return null;
+      }
+
+      // Tombol Tutup Modal
+      const closeBtnX = mx + (mw - 150) / 2;
+      const closeBtnY = my + mh - 44;
+      const closeBtnW = 150;
+      const closeBtnH = 34;
 
       if (px >= closeBtnX && px <= closeBtnX + closeBtnW && py >= closeBtnY && py <= closeBtnY + closeBtnH) {
         this.showLeaderboardModal = false;
