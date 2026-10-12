@@ -20,6 +20,7 @@ export interface SaveData {
   levels: Record<number, LevelRecord>;
   totalDeaths: number;
   leaderboard: LeaderboardEntry[];
+  customHeadImage?: string | null;
   settings: {
     sfx: number;
     music: number;
@@ -39,6 +40,7 @@ export class Storage {
     levels: {},
     totalDeaths: 0,
     leaderboard: generateDefaultLeaderboard(),
+    customHeadImage: null,
     settings: {
       sfx: 0.8,
       music: 0.4,
@@ -129,6 +131,15 @@ export class Storage {
     if (clean) {
       Storage.updateLeaderboard(clean);
     }
+    Storage.save();
+  }
+
+  public static getCustomHeadImage(): string | null {
+    return Storage.data.customHeadImage || null;
+  }
+
+  public static setCustomHeadImage(dataUrl: string | null): void {
+    Storage.data.customHeadImage = dataUrl;
     Storage.save();
   }
 

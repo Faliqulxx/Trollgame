@@ -3,6 +3,7 @@
 import { CONFIG } from '../config';
 import { Storage } from '../core/Storage';
 import { AudioManager } from '../core/Audio';
+import { HeadImageManager } from '../core/HeadImageManager';
 
 export class MenuScene {
   private animTimer = 0;
@@ -219,12 +220,14 @@ export class MenuScene {
   }
 
   private renderPlayerBadge(ctx: CanvasRenderingContext2D): void {
-    const currentName = Storage.getUsername() || '(Klik untuk isi nama)';
-    const text = `👤 Pemain: ${currentName}  ✏️`;
+    const currentName = Storage.getUsername() || '(Klik untuk atur profil & foto)';
+    const hasPhoto = HeadImageManager.getInstance().hasCustomHead();
+    const photoIcon = hasPhoto ? '📸 ' : '';
+    const text = `👤 ${photoIcon}Pemain: ${currentName}  ✏️`;
 
     ctx.font = 'bold 13px Outfit, sans-serif';
     const textW = ctx.measureText(text).width;
-    const badgeW = Math.max(180, textW + 28);
+    const badgeW = Math.max(220, textW + 28);
     const badgeH = 28;
     const badgeX = (CONFIG.CANVAS_WIDTH - badgeW) / 2;
     const badgeY = 132;
@@ -270,14 +273,35 @@ export class MenuScene {
     ctx.lineCap = 'round';
 
     const stickY = cy - 16 + Math.sin(this.animTimer * 3) * 4;
-    // Kepala
-    ctx.beginPath();
-    ctx.arc(cx, stickY - 12, 6, 0, Math.PI * 2);
-    ctx.stroke();
-    // Mata panik
-    ctx.fillStyle = '#000';
-    ctx.fillRect(cx - 2, stickY - 14, 2, 2);
-    ctx.fillRect(cx + 2, stickY - 14, 2, 2);
+    const customHead = HeadImageManager.getInstance().getImage();
+
+    if (customHead) {
+      // Kepala foto kustom di animasi menu
+      const headR = 9;
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.beginPath();
+      ctx.arc(cx, stickY - 12, headR, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(customHead, cx - headR, stickY - 12 - headR, headR * 2, headR * 2);
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.arc(cx, stickY - 12, headR, 0, Math.PI * 2);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = CONFIG.COLORS.STICKMAN;
+      ctx.stroke();
+    } else {
+      // Kepala stickman doodle default
+      ctx.beginPath();
+      ctx.arc(cx, stickY - 12, 6, 0, Math.PI * 2);
+      ctx.stroke();
+      // Mata panik
+      ctx.fillStyle = '#000';
+      ctx.fillRect(cx - 2, stickY - 14, 2, 2);
+      ctx.fillRect(cx + 2, stickY - 14, 2, 2);
+    }
 
     // Torso & Anggota tubuh
     ctx.beginPath();
@@ -298,11 +322,11 @@ export class MenuScene {
 
   private renderUsernameModal(ctx: CanvasRenderingContext2D): void {
     ctx.save();
-    ctx.fillStyle = 'rgba(15, 15, 20, 0.75)';
+    ctx.fillStyle = 'rgba(15, 15, 20, 0.78)';
     ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
 
-    const mw = 440;
-    const mh = 280;
+    const mw = 480;
+    const mh = 380;
     const mx = (CONFIG.CANVAS_WIDTH - mw) / 2;
     const my = (CONFIG.CANVAS_HEIGHT - mh) / 2;
 
@@ -311,35 +335,200 @@ export class MenuScene {
     ctx.strokeStyle = CONFIG.COLORS.STICKMAN;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.roundRect(mx, my, mw, mh, 14);
+    ctx.roundRect(mx, my, mw, mh, 16);
     ctx.fill();
     ctx.stroke();
 
     // Header Judul
     ctx.fillStyle = CONFIG.COLORS.STICKMAN;
-    ctx.font = '900 24px Outfit, sans-serif';
+    ctx.font = '900 22px Outfit, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('MASUKKAN NAMA PEMAIN', CONFIG.CANVAS_WIDTH / 2, my + 40);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('PROFIL & KEPALA STICKMAN', CONFIG.CANVAS_WIDTH / 2, my + 34);
 
     ctx.fillStyle = '#6b7280';
-    ctx.font = '500 14px Outfit, sans-serif';
-    ctx.fillText('Nama ini akan dicatat di Papan Peringkat Troll!', CONFIG.CANVAS_WIDTH / 2, my + 68);
+    ctx.font = '500 13px Outfit, sans-serif';
+    ctx.fillText('Atur nama & foto wajah untuk menggantikan kepala stickman!', CONFIG.CANVAS_WIDTH / 2, my + 54);
 
-    // Input Field Box
-    const inputX = mx + 40;
-    const inputY = my + 92;
-    const inputW = mw - 80;
-    const inputH = 46;
+    // Area Avatar & Upload Foto Wajah
+    const avatarBoxX = mx + 36;
+    const avatarBoxY = my + 68;
+    const avatarBoxW = 74;
+    const avatarBoxH = 74;
+
+    // Background kotak avatar
+    ctx.fillStyle = '#f3f4f6';
+    ctx.strokeStyle = '#d1d5db';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(avatarBoxX, avatarBoxY, avatarBoxW, avatarBoxH, 12);
+    ctx.fill();
+    ctx.stroke();
+
+    const customHead = HeadImageManager.getInstance().getImage();
+    const avCenterX = avatarBoxX + avatarBoxW / 2;
+    const avCenterY = avatarBoxY + avatarBoxH / 2;
+    const avRadius = 28;
+
+    if (customHead) {
+      // Foto kustom lingkaran HD
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.beginPath();
+      ctx.arc(avCenterX, avCenterY, avRadius, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(customHead, avCenterX - avRadius, avCenterY - avRadius, avRadius * 2, avRadius * 2);
+      ctx.restore();
+
+      ctx.strokeStyle = '#4f46e5';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(avCenterX, avCenterY, avRadius, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      // Stickman standar
+      ctx.strokeStyle = CONFIG.COLORS.STICKMAN;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(avCenterX, avCenterY, avRadius - 4, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Mata & senyum doodle
+      ctx.fillStyle = CONFIG.COLORS.STICKMAN;
+      ctx.beginPath();
+      ctx.arc(avCenterX - 8, avCenterY - 4, 2.5, 0, Math.PI * 2);
+      ctx.arc(avCenterX + 8, avCenterY - 4, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(avCenterX, avCenterY + 4, 10, 0.2 * Math.PI, 0.8 * Math.PI);
+      ctx.stroke();
+    }
+
+    // Panel tombol samping avatar
+    const btnStartX = mx + 122;
+    const hasPhoto = customHead !== null;
+
+    // Status label
+    ctx.textAlign = 'left';
+    ctx.fillStyle = hasPhoto ? '#059669' : '#4b5563';
+    ctx.font = 'bold 12.5px Outfit, sans-serif';
+    ctx.fillText(hasPhoto ? '✅ Foto Wajah Aktif' : '⚪ Kepala Stickman Default', btnStartX, my + 84);
+
+    const btnY = my + 94;
+    const btnH = 32;
+
+    if (hasPhoto) {
+      // 1. Tombol Foto Kamera (Compact)
+      const camBtnW = 100;
+      ctx.fillStyle = '#e11d48';
+      ctx.strokeStyle = '#be123c';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(btnStartX, btnY, camBtnW, btnH, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12.5px Outfit, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('📸 Kamera', btnStartX + camBtnW / 2, btnY + btnH / 2);
+
+      // 2. Tombol Upload File (Compact)
+      const fileBtnX = btnStartX + camBtnW + 8;
+      const fileBtnW = 100;
+      ctx.fillStyle = '#2563eb';
+      ctx.strokeStyle = '#1d4ed8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(fileBtnX, btnY, fileBtnW, btnH, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('📁 Upload', fileBtnX + fileBtnW / 2, btnY + btnH / 2);
+
+      // 3. Tombol Hapus
+      const delBtnX = fileBtnX + fileBtnW + 8;
+      const delBtnW = 85;
+      ctx.fillStyle = '#fee2e2';
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(delBtnX, btnY, delBtnW, btnH, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#b91c1c';
+      ctx.fillText('🗑️ Hapus', delBtnX + delBtnW / 2, btnY + btnH / 2);
+    } else {
+      // Belum ada foto: 2 tombol besar sejajar
+      const camBtnW = 145;
+      ctx.fillStyle = '#e11d48';
+      ctx.strokeStyle = '#be123c';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(btnStartX, btnY, camBtnW, btnH, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12.5px Outfit, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('📸 Foto Kamera', btnStartX + camBtnW / 2, btnY + btnH / 2);
+
+      const fileBtnX = btnStartX + camBtnW + 10;
+      const fileBtnW = 145;
+      ctx.fillStyle = '#2563eb';
+      ctx.strokeStyle = '#1d4ed8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(fileBtnX, btnY, fileBtnW, btnH, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('📁 Upload File', fileBtnX + fileBtnW / 2, btnY + btnH / 2);
+    }
+
+    // Teks keterangan kecil di bawah tombol
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '500 11px Outfit, sans-serif';
+    ctx.fillText('Langsung foto kamera atau upload file • Crop Wajah HD 512×512', btnStartX, my + 140);
+
+    // Garis pemisah tipis
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(mx + 36, my + 152);
+    ctx.lineTo(mx + mw - 36, my + 152);
+    ctx.stroke();
+
+    // Field Input Nama Pemain
+    const inputX = mx + 36;
+    const inputY = my + 178;
+    const inputW = mw - 72;
+    const inputH = 42;
+
+    ctx.fillStyle = '#374151';
+    ctx.font = 'bold 13px Outfit, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('Nama Pemain:', inputX, my + 172);
 
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#2563eb';
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.roundRect(inputX, inputY, inputW, inputH, 8);
     ctx.fill();
     ctx.stroke();
 
-    // Teks Input + Kursor Kedip
+    // Teks Nama + Kursor
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     const showCursor = Math.floor(this.cursorBlinkTimer * 2) % 2 === 0;
@@ -347,19 +536,19 @@ export class MenuScene {
 
     if (displayText.length === 0) {
       ctx.fillStyle = '#9ca3af';
-      ctx.font = 'italic 16px Outfit, sans-serif';
-      ctx.fillText('Ketik namamu di sini...' + (showCursor ? '|' : ''), inputX + 16, inputY + inputH / 2);
+      ctx.font = 'italic 15px Outfit, sans-serif';
+      ctx.fillText('Ketik namamu di sini...' + (showCursor ? '|' : ''), inputX + 14, inputY + inputH / 2);
     } else {
       ctx.fillStyle = CONFIG.COLORS.STICKMAN;
-      ctx.font = 'bold 18px Outfit, sans-serif';
-      ctx.fillText(displayText + (showCursor ? '|' : ''), inputX + 16, inputY + inputH / 2);
+      ctx.font = 'bold 17px Outfit, sans-serif';
+      ctx.fillText(displayText + (showCursor ? '|' : ''), inputX + 14, inputY + inputH / 2);
     }
 
     // Tombol Acak Nama
-    const randomBtnX = mx + 40;
-    const randomBtnY = my + 152;
-    const randomBtnW = mw - 80;
-    const randomBtnH = 34;
+    const randomBtnX = mx + 36;
+    const randomBtnY = my + 230;
+    const randomBtnW = mw - 72;
+    const randomBtnH = 32;
 
     ctx.fillStyle = '#f3f4f6';
     ctx.strokeStyle = '#9ca3af';
@@ -374,11 +563,11 @@ export class MenuScene {
     ctx.textAlign = 'center';
     ctx.fillText('🎲 Beri Saya Nama Acak / Troll', CONFIG.CANVAS_WIDTH / 2, randomBtnY + randomBtnH / 2 + 1);
 
-    // Tombol Simpan & Main
-    const submitBtnX = mx + 40;
-    const submitBtnY = my + 200;
-    const submitBtnW = mw - 80;
-    const submitBtnH = 48;
+    // Tombol Simpan & Lanjut Main
+    const submitBtnX = mx + 36;
+    const submitBtnY = my + 274;
+    const submitBtnW = mw - 72;
+    const submitBtnH = 46;
 
     ctx.fillStyle = CONFIG.COLORS.EXIT_GREEN;
     ctx.strokeStyle = CONFIG.COLORS.STICKMAN;
@@ -394,11 +583,11 @@ export class MenuScene {
 
     // Tombol Close X jika sudah ada nama
     if (Storage.getUsername()) {
-      const closeX = mx + mw - 34;
+      const closeX = mx + mw - 32;
       const closeY = my + 14;
       ctx.fillStyle = '#6b7280';
       ctx.font = 'bold 18px Outfit, sans-serif';
-      ctx.fillText('✕', closeX, closeY + 10);
+      ctx.fillText('✕', closeX, closeY + 12);
     }
 
     ctx.restore();
@@ -587,28 +776,72 @@ export class MenuScene {
   }
 
   public handleClick(px: number, py: number): string | null {
-    // 1. Jika Modal Input Nama Aktif
+    // 1. Jika Modal Input Nama & Profil Aktif
     if (this.showUsernameModal) {
-      const mw = 440;
-      const mh = 280;
+      const mw = 480;
+      const mh = 380;
       const mx = (CONFIG.CANVAS_WIDTH - mw) / 2;
       const my = (CONFIG.CANVAS_HEIGHT - mh) / 2;
 
+      const hasPhoto = HeadImageManager.getInstance().hasCustomHead();
+      const btnStartX = mx + 122;
+      const btnY = my + 94;
+      const btnH = 32;
+
+      if (hasPhoto) {
+        // 1. Tombol Kamera (Compact)
+        const camBtnW = 100;
+        if (px >= btnStartX && px <= btnStartX + camBtnW && py >= btnY && py <= btnY + btnH) {
+          HeadImageManager.getInstance().triggerCameraCapture();
+          return null;
+        }
+
+        // 2. Tombol Upload File (Compact)
+        const fileBtnX = btnStartX + camBtnW + 8;
+        const fileBtnW = 100;
+        if (px >= fileBtnX && px <= fileBtnX + fileBtnW && py >= btnY && py <= btnY + btnH) {
+          HeadImageManager.getInstance().triggerFileInput();
+          return null;
+        }
+
+        // 3. Tombol Hapus
+        const delBtnX = fileBtnX + fileBtnW + 8;
+        const delBtnW = 85;
+        if (px >= delBtnX && px <= delBtnX + delBtnW && py >= btnY && py <= btnY + btnH) {
+          HeadImageManager.getInstance().removeCustomHead();
+          return null;
+        }
+      } else {
+        // Belum ada foto: 2 tombol besar
+        const camBtnW = 145;
+        if (px >= btnStartX && px <= btnStartX + camBtnW && py >= btnY && py <= btnY + btnH) {
+          HeadImageManager.getInstance().triggerCameraCapture();
+          return null;
+        }
+
+        const fileBtnX = btnStartX + camBtnW + 10;
+        const fileBtnW = 145;
+        if (px >= fileBtnX && px <= fileBtnX + fileBtnW && py >= btnY && py <= btnY + btnH) {
+          HeadImageManager.getInstance().triggerFileInput();
+          return null;
+        }
+      }
+
       // Tombol Acak Nama
-      const randomBtnX = mx + 40;
-      const randomBtnY = my + 152;
-      const randomBtnW = mw - 80;
-      const randomBtnH = 34;
+      const randomBtnX = mx + 36;
+      const randomBtnY = my + 230;
+      const randomBtnW = mw - 72;
+      const randomBtnH = 32;
       if (px >= randomBtnX && px <= randomBtnX + randomBtnW && py >= randomBtnY && py <= randomBtnY + randomBtnH) {
         this.inputName = this.getRandomName();
         return null;
       }
 
       // Tombol Simpan & Lanjut
-      const submitBtnX = mx + 40;
-      const submitBtnY = my + 200;
-      const submitBtnW = mw - 80;
-      const submitBtnH = 48;
+      const submitBtnX = mx + 36;
+      const submitBtnY = my + 274;
+      const submitBtnW = mw - 72;
+      const submitBtnH = 46;
       if (px >= submitBtnX && px <= submitBtnX + submitBtnW && py >= submitBtnY && py <= submitBtnY + submitBtnH) {
         this.confirmUsername();
         if (this.pendingPlay) {
@@ -620,9 +853,9 @@ export class MenuScene {
 
       // Tombol Close X jika sudah ada nama
       if (Storage.getUsername()) {
-        const closeX = mx + mw - 34;
+        const closeX = mx + mw - 32;
         const closeY = my + 14;
-        if (px >= closeX - 10 && px <= closeX + 20 && py >= closeY - 10 && py <= closeY + 20) {
+        if (px >= closeX - 12 && px <= closeX + 18 && py >= closeY - 8 && py <= closeY + 24) {
           this.showUsernameModal = false;
           this.pendingPlay = false;
           return null;
@@ -702,7 +935,7 @@ export class MenuScene {
     const badgeY = 132;
     const badgeH = 28;
     if (py >= badgeY && py <= badgeY + badgeH) {
-      const badgeW = 220;
+      const badgeW = 280;
       const badgeX = (CONFIG.CANVAS_WIDTH - badgeW) / 2;
       if (px >= badgeX && px <= badgeX + badgeW) {
         this.inputName = Storage.getUsername();

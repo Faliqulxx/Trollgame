@@ -5,6 +5,7 @@ import { Collision, Rect } from '../physics/Collision';
 import { Input } from '../core/Input';
 import { AudioManager } from '../core/Audio';
 import { ParticleSystem } from '../core/Particles';
+import { HeadImageManager } from '../core/HeadImageManager';
 
 export type PlayerState = 'idle' | 'running' | 'jumping' | 'falling' | 'dead';
 
@@ -305,17 +306,52 @@ export class Player {
     const neckY = -26;
     const pelvisY = -16;
 
-    // 1. Kepala Lingkaran
-    ctx.beginPath();
-    ctx.arc(0, headCenterY, headRadius, 0, Math.PI * 2);
-    ctx.stroke();
+    const customHead = HeadImageManager.getInstance().getImage();
 
-    // Mata (titik ekspresif melihat ke arah lari)
-    const eyeOffsetX = this.facing * 2.2;
-    ctx.fillStyle = CONFIG.COLORS.STICKMAN;
-    ctx.beginPath();
-    ctx.arc(eyeOffsetX, headCenterY - 0.5, 1.2, 0, Math.PI * 2);
-    ctx.fill();
+    if (customHead) {
+      // 1. Render Foto Kepala Wajah Pemain (Circular Cutout HD)
+      // Radius 10px memberi proporsi bobblehead wajah yang sangat jelas, tajam, & ekspresif
+      const customRadius = 10;
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.beginPath();
+      ctx.arc(0, headCenterY, customRadius, 0, Math.PI * 2);
+      ctx.clip();
+
+      // Jika menghadap ke kiri (facing === -1), balik foto secara horizontal
+      if (this.facing === -1) {
+        ctx.scale(-1, 1);
+      }
+
+      ctx.drawImage(
+        customHead,
+        -customRadius,
+        headCenterY - customRadius,
+        customRadius * 2,
+        customRadius * 2
+      );
+      ctx.restore();
+
+      // Outline hitam khas doodle stickman
+      ctx.strokeStyle = CONFIG.COLORS.STICKMAN;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, headCenterY, customRadius, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      // 1. Kepala Lingkaran Asli Stickman
+      ctx.beginPath();
+      ctx.arc(0, headCenterY, headRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Mata (titik ekspresif melihat ke arah lari)
+      const eyeOffsetX = this.facing * 2.2;
+      ctx.fillStyle = CONFIG.COLORS.STICKMAN;
+      ctx.beginPath();
+      ctx.arc(eyeOffsetX, headCenterY - 0.5, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // 2. Garis Badan (Torso)
     ctx.beginPath();
