@@ -103,7 +103,8 @@ export class Level implements TileMapInterface {
       'trapdoor',
       'chainBomb',
       'explodingFloor',
-      'spikeTransformFloor'
+      'spikeTransformFloor',
+      'launcherFloor'
     ]);
 
     if (data?.entities) {
@@ -259,11 +260,13 @@ export class Level implements TileMapInterface {
             break;
           }
           case 'fakeCheckpoint': {
-            this.traps.push(new FakeCheckpoint(id, ex, ey, audio));
+            const fcy = ent.y !== undefined ? ent.y * ts + ts - 40 : ey;
+            this.traps.push(new FakeCheckpoint(id, ex, fcy, audio));
             break;
           }
           case 'fakeDoor': {
-            this.traps.push(new FakeDoor(id, ex, ey, audio));
+            const fdy = ent.y !== undefined ? ent.y * ts + ts - 48 : ey;
+            this.traps.push(new FakeDoor(id, ex, fdy, audio));
             break;
           }
           case 'runningDoor': {
@@ -295,7 +298,7 @@ export class Level implements TileMapInterface {
             break;
           }
           case 'explodingFloor': {
-            this.traps.push(new ExplodingFloor(id, ex, ey, (ent.w || 1) * ts, ts, ent.warnTime !== undefined ? ent.warnTime : 0, camera, audio, particles));
+            this.traps.push(new ExplodingFloor(id, ex, ey, (ent.w || 1) * ts, ts, ent.warnTime !== undefined ? ent.warnTime : 0.35, camera, audio, particles));
             break;
           }
           case 'spikeTransformFloor': {

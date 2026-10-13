@@ -130,4 +130,32 @@ describe('Level Validation Tests (PRD v1.1)', () => {
     door.reset();
     expect(door.x).toBe(50);
   });
+
+  it('Level 3 harus memuat 4 jenis jebakan tak terduga baru dengan pijakan yang adil', () => {
+    const level3Data = LEVELS.find((l) => l.id === 3)!;
+    expect(level3Data).toBeDefined();
+
+    const level3 = new Level(level3Data);
+    const trapTypes = level3.traps.map((t) => t.type);
+
+    // Verifikasi keberadaan 4 jenis jebakan baru
+    expect(trapTypes).toContain('spikeTransformFloor'); // Jebakan 1 di koridor awal
+    expect(trapTypes).toContain('slidingSaw');           // Jebakan 2 di seksi 2
+    expect(trapTypes).toContain('thwomp');               // Jebakan 3 di seksi 3
+    expect(trapTypes).toContain('fakeDoor');             // Jebakan 4 sebelum pintu keluar
+
+    // Verifikasi checkpoint tambahan (total 3 checkpoint untuk kenyamanan pemain)
+    expect(level3.checkpoints.length).toBe(3);
+
+    // Verifikasi pintu keluar asli berada di akhir level
+    expect(level3.door).not.toBeNull();
+    expect(level3.door!.x).toBe(158 * 32);
+
+    // Verifikasi 2 duri tersembunyi di platform atas (x: 87, y: 7, w: 2)
+    const platformSpikes = level3Data.entities?.find(
+      (e) => e.type === 'hiddenSpikes' && e.x === 87 && e.y === 7 && e.w === 2
+    );
+    expect(platformSpikes).toBeDefined();
+  });
 });
+

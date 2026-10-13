@@ -92,75 +92,199 @@ export const LEVELS: LevelData[] = [
 
   // =========================================================================
   // LEVEL 2: Jangan Percaya Lantai (Lebar 160 Tile / 5.120 px)
-  // Jebakan: T04 (Lantai Palsu), T02 (Duri Muncul Fix), T20 (Lantai Hilang), T23 (Lantai Jadi Duri)
-  // Jarak Spawn (x: 2) -> Pintu (x: 154) = 4.864 px
+  // Jebakan Bervariasi:
+  // - Lantai Runtuh (T03), Blok Tak Terlihat (T18), Lantai Palsu (T04)
+  // - Lantai Peluncur (T21), Duri Muncul (T02), Lantai Meledak (T22)
+  // - Lantai Hilang (T20), Lantai Engsel Trapdoor (T24), Langit-langit Jatuh (T25)
+  // - Lantai Jadi Duri (T23), Gergaji Meluncur (T06), Platform Jatuh Troll (T09)
+  // - Checkpoint Palsu (T13), Bom Berantai (T27), Thwomp (T07)
+  // - Pegas Palsu (T26), Pilar Tumbang, Gergaji Berputar (T05), Pintu Palsu (T14)
+  // Jarak Spawn (x: 3) -> Pintu (x: 156) = 153 tile (4.896 px > 3.800 px)
   // =========================================================================
   {
     id: 2,
     name: 'Jangan Percaya Lantai',
     tileSize: 32,
     grid: createGrid(160, 14, (g) => {
+      // Dinding pembatas kiri dan kanan
       for (let r = 0; r < 14; r++) { g[r][0] = '#'; g[r][159] = '#'; }
-      fillSolidFloor(g, 1, 35, 11);
-      fillSolidFloor(g, 40, 75, 11);
-      fillSolidFloor(g, 80, 120, 11);
-      fillSolidFloor(g, 125, 158, 11);
 
+      // Langit-langit padat
+      fillSolidCeiling(g, 1, 158);
+
+      // Lantai utama per seksi
+      fillSolidFloor(g, 1, 35, 11);    // Seksi 1: Pengenalan jebakan lantai
+      fillSolidFloor(g, 41, 75, 11);   // Seksi 2: Jebakan reflek & kejatuhan
+      fillSolidFloor(g, 81, 120, 11);  // Seksi 3: Ledakan berantai & mesin berat
+      fillSolidFloor(g, 126, 158, 11); // Seksi 4: Gauntlet puncak & pintu palsu
+
+      // Pijakan penghubung jurang (SOLID dan PASTI BISA DILEWATI!)
+      g[9][38] = '#'; g[9][39] = '#';    // Jurang 1 (36-40): Pijakan solid tengah
+      g[9][78] = '#'; g[9][79] = '#';    // Jurang 2 (76-80): Pijakan solid tengah
+      g[9][123] = '#'; g[9][124] = '#';  // Jurang 3 (121-125): Pijakan solid tengah
+
+      // Titik Spawn dan Pintu Keluar Utama
       g[10][3] = 'P';
-      g[10][154] = 'D';
-
-      // Pijakan penghubung jurang
-      g[9][37] = '#'; g[9][38] = '#';
-      g[9][77] = '#'; g[9][78] = '#';
-      g[9][122] = '#'; g[9][123] = '#';
+      g[10][156] = 'D';
     }),
     entities: [
-      // Sec 1: Lantai Palsu T04
-      { type: 'fakeFloor', x: 20, y: 11, w: 2 },
-      { type: 'spikes', x: 19, y: 13, w: 4, orientation: 'up' },
-      // Lantai bom 4 langkah setelah lubang lantai palsu:
-      { type: 'explodingFloor', x: 25, y: 11, w: 2 },
+      // -----------------------------------------------------------------------
+      // SEKSI 1: PENGENALAN JEBAKAN LANTAI (Tile 1 - 45)
+      // -----------------------------------------------------------------------
+      // Trap 1: Lantai Runtuh T03 awal
+      { type: 'spikes', x: 11, y: 13, w: 2, orientation: 'up' },
+      { type: 'crumble', x: 11, y: 11, w: 2 },
 
-      // Sec 2: Duri Muncul T02 (Versi diperbaiki di atas permukaan lantai)
+      // Trap 2: Lantai Palsu T04 (2 tile) - bisa dilompati normal, atau gunakan blok rahasia
+      { type: 'spikes', x: 18, y: 13, w: 2, orientation: 'up' },
+      { type: 'fakeFloor', x: 18, y: 11, w: 2 },
+      { type: 'invisibleBlock', x: 18, y: 8, w: 2, h: 1 }, // Pijakan rahasia aman di atas lubang!
+
+      // Trap 3: Lantai Peluncur T21 (melontarkan ke atas jika diinjak)
+      { type: 'launcherFloor', x: 23, y: 11, w: 2, targetY: 3, ceilingSpikesY: 1, count: 2 },
+
+      // Trap 4: Duri Muncul T02 setelah mendarat
       {
         type: 'hiddenSpikes',
-        x: 60,
+        x: 28,
         y: 11,
-        w: 3,
-        trigger: { x: 55, y: 9, w: 3, h: 3 }
+        w: 2,
+        trigger: { x: 26, y: 9, w: 3, h: 3 }
       },
-      // Lantai bom 4 langkah setelah jebakan duri muncul:
-      { type: 'explodingFloor', x: 66, y: 11, w: 2 },
 
-      // Sec 3: Lantai Hilang T20 di atas jurang
-      { type: 'vanishingFloor', x: 95, y: 11, w: 3 },
-      { type: 'spikes', x: 94, y: 13, w: 5, orientation: 'up' },
-      // Lantai bom 5 langkah setelah jurang lantai hilang:
-      { type: 'explodingFloor', x: 102, y: 11, w: 2 },
+      // Trap 5: Lantai Meledak T22 dengan jeda waktu peringatan adil (0.6 detik)
+      { type: 'explodingFloor', x: 32, y: 11, w: 2, warnTime: 0.6 },
+      // Blok rahasia di atas bom untuk yang ingin jalan atas
+      { type: 'invisibleBlock', x: 32, y: 8, w: 2, h: 1 },
 
-      // Sec 4: Lantai Jadi Duri T23
-      { type: 'spikeTransformFloor', x: 138, y: 11, w: 3 }
+      // Jurang 1 (Tile 36 - 40): Duri di dasar jurang, platform solid g[9][38..39] bebas halangan!
+      { type: 'spikes', x: 36, y: 13, w: 5, orientation: 'up' },
+
+      // -----------------------------------------------------------------------
+      // SEKSI 2: REFLEKS CEPAT & GAUNTLET GERGAJI (Tile 41 - 81)
+      // -----------------------------------------------------------------------
+      // Trap 6: Lantai Bom Pasca-Checkpoint 1 (waktu peringatan 0.6s)
+      { type: 'explodingFloor', x: 48, y: 11, w: 2, warnTime: 0.6 },
+      { type: 'invisibleBlock', x: 48, y: 8, w: 2, h: 1 }, // Pijakan rahasia aman
+
+      // Trap 7: Lantai Engsel Trapdoor T24
+      { type: 'spikes', x: 53, y: 13, w: 2, orientation: 'up' },
+      { type: 'trapdoor', x: 53, y: 11, w: 2 },
+
+      // Trap 8: Langit-langit Jatuh T25
+      { type: 'fallingCeiling', x: 58, y: 1, floorY: 11, w: 2 },
+
+      // Trap 9: Lantai Berubah Jadi Duri T23
+      { type: 'spikeTransformFloor', x: 63, y: 11, w: 2 },
+
+      // Trap 10: Gergaji Meluncur T06 (kecepatan santai 180px/s, mudah dilompati)
+      {
+        type: 'slidingSaw',
+        x: 73,
+        y: 10,
+        targetX: 67,
+        targetY: 10,
+        trigger: { x: 70, y: 8, w: 2, h: 4 },
+        radius: 18,
+        speed: 180
+      },
+      // Pijakan rahasia untuk melompati gergaji dengan santai
+      { type: 'invisibleBlock', x: 69, y: 8, w: 2, h: 1 },
+
+      // Jurang 2 (Tile 76 - 80): Duri di dasar jurang, platform solid g[9][78..79] bebas halangan!
+      { type: 'spikes', x: 76, y: 13, w: 5, orientation: 'up' },
+
+      // -----------------------------------------------------------------------
+      // SEKSI 3: LEDAKAN BERANTAI & MESIN BERAT (Tile 81 - 125)
+      // -----------------------------------------------------------------------
+      // Trap 11: Duri Muncul T02 pasca Checkpoint 2
+      {
+        type: 'hiddenSpikes',
+        x: 88,
+        y: 11,
+        w: 2,
+        trigger: { x: 86, y: 9, w: 3, h: 3 }
+      },
+
+      // Trap 12: Bom Berantai T27 di lantai (3 ledakan cepat) + Pijakan rahasia di atasnya
+      { type: 'chainBomb', x: 94, y: 11, count: 3 },
+      { type: 'invisibleBlock', x: 94, y: 8, w: 3, h: 1 }, // Jembatan rahasia melewati bom
+
+      // Trap 13: Balok Menghimpit Thwomp T07
+      { type: 'thwomp', x: 102, y: 1, targetY: 9.5, w: 2, h: 2 },
+
+      // Trap 14: Lantai Hilang Lenyap T20 (dengan delay wajar 0.35s)
+      { type: 'spikes', x: 108, y: 13, w: 2, orientation: 'up' },
+      { type: 'vanishingFloor', x: 108, y: 11, w: 2, delay: 0.35 },
+      { type: 'invisibleBlock', x: 108, y: 8, w: 2, h: 1 },
+
+      // Trap 15: Pegas Palsu T26
+      { type: 'fakeSpring', x: 112, y: 11 },
+
+      // Trap 16: Pilar Tumbang
+      { type: 'fallingPillar', x: 116, y: 11, floorY: 11, w: 1.5, h: 6 },
+
+      // Jurang 3 (Tile 121 - 125): Duri di dasar, platform solid g[9][123..124], gergaji berayun tinggi
+      { type: 'spikes', x: 121, y: 13, w: 5, orientation: 'up' },
+      { type: 'saw', x: 123, y: 5, targetX: 124, targetY: 6, radius: 16, speed: 70 },
+
+      // -----------------------------------------------------------------------
+      // SEKSI 4: GAUNTLET PUNCAK & PINTU ASLI (Tile 126 - 158)
+      // -----------------------------------------------------------------------
+      // Trap 17: Pasca Checkpoint 3 - Lantai Jadi Duri T23
+      { type: 'spikeTransformFloor', x: 132, y: 11, w: 2 },
+
+      // Trap 18: Lantai Palsu T04
+      { type: 'spikes', x: 136, y: 13, w: 4, orientation: 'up' },
+      { type: 'fakeFloor', x: 137, y: 11, w: 2 },
+      { type: 'invisibleBlock', x: 137, y: 8, w: 2, h: 1 },
+
+      // Trap 19: Lantai Bom T22 dengan waktu reaksi
+      { type: 'explodingFloor', x: 142, y: 11, w: 2, warnTime: 0.5 },
+
+      // Trap 20: Lantai Peluncur T21
+      { type: 'launcherFloor', x: 146, y: 11, w: 2, targetY: 3, ceilingSpikesY: 1, count: 2 },
+
+      // Trap 21: Pintu Palsu T14 + Jembatan Rahasia Melompati Pintu Palsu!
+      { type: 'fakeDoor', x: 150, y: 10 },
+      { type: 'invisibleBlock', x: 149, y: 8, w: 3, h: 1 }, // Pijakan rahasia melompati pintu palsu
+
+      // Trap 22: Duri Tersembunyi T02 sebelum pintu asli
+      {
+        type: 'hiddenSpikes',
+        x: 153,
+        y: 11,
+        w: 2,
+        trigger: { x: 151, y: 9, w: 3, h: 3 }
+      }
     ],
     checkpoints: [
-      { x: 45, y: 10 },
-      { x: 88, y: 10 }
+      { x: 44, y: 10 },
+      { x: 84, y: 10 },
+      { x: 128, y: 10 }
     ],
     deathMessages: [
       'Lantainya tembus ya?',
       'Duri menyembul dari celah lantai!',
-      'Lantai berubah jadi duri jika diam terlalu lama.',
-      'Jangan percaya pada lantai manapun.'
+      'Lantai berubah jadi duri jika diinjak!',
+      'Jangan percaya pada lantai manapun!',
+      'Itu pintu palsu, bung!',
+      'Pegas itu bukan kawanmu.',
+      'Langit-langit pun ikut berkhianat!'
     ]
   },
 
   // =========================================================================
   // LEVEL 3: Roda Bergigi (Lebar 165 Tile / 5.280 px)
-  // Jebakan: T05 (Saw), T09 (Moving Platform), T24 (Trapdoor)
+  // Jebakan: T05 (Saw), T06 (Sliding Saw), T07 (Thwomp), T09 (Moving Platform),
+  //          T14 (Fake Door), T23 (Spike Transform Floor), T24 (Trapdoor)
   // Solusi:
-  // - Jurang 1: Gunakan platform bergerak T09 untuk menyeberang.
-  // - Jurang 2: JALUR ATAS! Lompat ke platform x:83 -> x:88 -> x:92 untuk melewati Trapdoor (x:85)!
-  //   Jangan lewat jalur bawah karena trapdoor akan membuka ke bawah.
-  // - Jurang 3: Gunakan pijakan tengah x:132 untuk menyeberang dengan aman.
+  // - Jurang 1: Lompati lantai duri di awal (x: 18), gunakan platform bergerak T09.
+  // - Jurang 2: Hindari Sliding Saw (x: 76) lewat platform atas g[8][70..72], lalu
+  //   lompat ke jalur atas x:83 -> x:88 -> x:92 untuk melewati Trapdoor (x:85)!
+  // - Jurang 3: Pancing Thwomp (x: 114) jatuh dulu, seberangi platform jurang.
+  // - Pintu Keluar: Lompati Pintu Palsu (x: 150) via platform g[8][146..147] / invisibleBlock
+  //   untuk mencapai Pintu Asli di x: 158!
   // =========================================================================
   {
     id: 3,
@@ -179,6 +303,9 @@ export const LEVELS: LevelData[] = [
       // Jurang 1 (30-45): Pijakan bantu
       g[9][37] = '#'; g[9][38] = '#';
 
+      // Pijakan bantu melewati Sliding Saw di Seksi 2
+      g[8][70] = '#'; g[8][71] = '#'; g[8][72] = '#';
+
       // Jurang 2 (83-88) TRAPDOOR: JALUR ATAS TERSEDIA & SANGAT MUDAH DILOMPATI!
       // Jalur bawah adalah jembatan dengan Trapdoor T24 di tengahnya.
       // Jalur atas adalah 3 pijakan lebar di atas trapdoor:
@@ -189,38 +316,94 @@ export const LEVELS: LevelData[] = [
 
       // Jurang 3 (125-140): Pijakan bantu tengah
       g[9][132] = '#'; g[9][133] = '#';
+
+      // Pijakan bantu melompati Pintu Palsu di Seksi 4 sebelum pintu keluar
+      g[8][146] = '#'; g[8][147] = '#';
     }),
     entities: [
+      // -----------------------------------------------------------------------
+      // SEKSI 1: KORIDOR AWAL & JURANG 1 (Tile 1 - 44)
+      // -----------------------------------------------------------------------
+      // [JEBAKAN BARU 1]: Lantai Berubah Jadi Duri T23 di koridor pembuka (x: 18)
+      // Tidak terduga di awal koridor, tapi ada pijakan solid luas di x: 1-17 & x: 20-30
+      { type: 'spikeTransformFloor', x: 18, y: 11, w: 2 },
+
       // Jurang 1: Duri & Platform Bergerak T09
       { type: 'spikes', x: 31, y: 13, w: 14, orientation: 'up' },
       { type: 'movingPlatform', x: 32, y: 9, targetX: 36, targetY: 9, w: 3, speed: 75 },
       { type: 'movingPlatform', x: 39, y: 9, targetX: 43, targetY: 9, w: 3, speed: 75 },
 
-      // Sec 2: Gergaji berputar T05
+      // -----------------------------------------------------------------------
+      // SEKSI 2: KORIDOR CHECKPOINT 1 & JURANG TRAPDOOR (Tile 45 - 87)
+      // -----------------------------------------------------------------------
+      // 5 langkah setelah checkpoint 1 (x: 50): Lantai bom instan!
+      { type: 'explodingFloor', x: 55, y: 11, w: 2 },
+
+      // Gergaji berputar T05
       { type: 'saw', x: 62, y: 7, targetX: 62, targetY: 10, radius: 20, speed: 90 },
+
+      // [JEBAKAN BARU 2]: Gergaji Luncur Sergap T06 (x: 76 meluncur ke x: 66)
+      // Terpicu saat pemain lewat x: 67. Pemain bisa melompat ke platform atas g[8][70..72]
+      {
+        type: 'slidingSaw',
+        x: 76,
+        y: 10,
+        targetX: 66,
+        targetY: 10,
+        trigger: { x: 67, y: 9, w: 2, h: 2 },
+        radius: 18,
+        speed: 320
+      },
 
       // Jurang 2: Trapdoor T24 di jalur bawah (terbuka jika diinjak) & Duri di bawahnya
       { type: 'spikes', x: 84, y: 13, w: 4, orientation: 'up' },
       { type: 'trapdoor', x: 84, y: 11, w: 4 },
+
+      // 2 Duri tersembunyi yang baru menyembul keluar ketika diinjak (x: 87 - 88)
+      {
+        type: 'hiddenSpikes',
+        x: 87,
+        y: 7,
+        w: 2,
+        trigger: { x: 86.8, y: 5.5, w: 2.2, h: 2 }
+      },
+
+      // -----------------------------------------------------------------------
+      // SEKSI 3: KORIDOR CHECKPOINT 2 & JURANG 3 (Tile 88 - 139)
+      // -----------------------------------------------------------------------
+      // 5 langkah setelah checkpoint 2 (x: 100): Duri muncul dari lantai!
+      { type: 'hiddenSpikes', x: 105, y: 11, w: 2, trigger: { x: 103, y: 9, w: 3, h: 3 } },
+
+      // [JEBAKAN BARU 3]: Balok Menghimpit Thwomp T07 dari langit-langit (x: 114)
+      // Tidak terduga di lorong sepi. Ada ruang berdiri aman di x: 108-113 & x: 117-125
+      { type: 'thwomp', x: 114, y: 1, targetY: 9.5, w: 2, h: 2 },
 
       // Jurang 3: Platform troll jatuh T09 + Platform bantu
       { type: 'spikes', x: 126, y: 13, w: 14, orientation: 'up' },
       { type: 'movingPlatform', x: 127, y: 9, targetX: 131, targetY: 9, w: 3, speed: 85, trollFall: true },
       { type: 'movingPlatform', x: 134, y: 9, targetX: 138, targetY: 9, w: 3, speed: 85 },
 
-      // Jebakan gila pasca-checkpoint:
-      // 5 langkah setelah checkpoint 1 (x: 50): Lantai bom instan!
-      { type: 'explodingFloor', x: 55, y: 11, w: 2 },
-      // 5 langkah setelah checkpoint 2 (x: 100): Duri muncul dari lantai!
-      { type: 'hiddenSpikes', x: 105, y: 11, w: 2, trigger: { x: 103, y: 9, w: 3, h: 3 } }
+      // -----------------------------------------------------------------------
+      // SEKSI 4: KORIDOR PINTU KELUAR & PINTU PALSU (Tile 140 - 163)
+      // -----------------------------------------------------------------------
+      // [JEBAKAN BARU 4]: Pintu Palsu T14 sebelum Pintu Asli (x: 150)
+      // Menipu pemain yang mengira level sudah usai. Dilengkapi platform bantu g[8][146..147]
+      // dan invisibleBlock di x: 149 y: 8 untuk melompati pintu palsu menuju pintu asli di x: 158
+      { type: 'fakeDoor', x: 150, y: 10 },
+      { type: 'invisibleBlock', x: 149, y: 8, w: 3, h: 1 }
     ],
     checkpoints: [
       { x: 50, y: 10 },
-      { x: 100, y: 10 }
+      { x: 100, y: 10 },
+      { x: 142, y: 10 }
     ],
     deathMessages: [
       'Lantai bawah membuka ke jurang! Lewatlah jalur atas.',
       'Terpotong gergaji putar.',
+      'Lantai pembuka tiba-tiba berubah jadi duri!',
+      'Awas gergaji sergap yang meluncur dari depan!',
+      'Penyet dihantam balok Thwomp dari atas!',
+      'Itu pintu keluar palsu! Lompati dari atas menuju pintu asli.',
       'Gunakan pijakan atas untuk melewati trapdoor.',
       'Platformnya jatuh bersamamu! Segera melompat.'
     ]

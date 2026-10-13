@@ -11,6 +11,7 @@ import { Storage } from '../core/Storage';
 import { HUD } from '../ui/HUD';
 import { Level } from '../levels/LevelLoader';
 import { LEVELS } from '../levels/levelsData';
+import { DialogueManager } from '../dialogue/DialogueManager';
 
 export type GameSceneStatus = 'PLAYING' | 'DYING' | 'LEVEL_CLEAR' | 'PAUSED' | 'GO_TO_MENU' | 'GO_TO_END';
 
@@ -22,6 +23,7 @@ export class GameScene {
   public particles: ParticleSystem;
   public audio: AudioManager;
   public hud: HUD;
+  public dialogueManager: DialogueManager;
 
   // Status Permainan
   public status: GameSceneStatus = 'PLAYING';
@@ -45,6 +47,7 @@ export class GameScene {
     this.particles = particles;
     this.audio = audio;
     this.hud = new HUD();
+    this.dialogueManager = new DialogueManager();
     this.player = new Player();
 
     const data = LEVELS[this.currentLevelIndex];
@@ -74,6 +77,7 @@ export class GameScene {
     this.hud.isPaused = false;
     this.hud.currentLevelId = data.id;
     this.particles.clear();
+    this.dialogueManager.resetForNewLevel();
 
     // Jika pintu di akhir level hancur / teleport, jadikan titik tersebut checkpoint aktif!
     if (this.level.door) {
@@ -148,7 +152,7 @@ export class GameScene {
       if (trap.isDeadly()) {
         for (const hb of trap.getHitboxes()) {
           if (Collision.aabb(pBox, hb)) {
-            this.triggerDeath();
+            this.triggerDeath(trap.type);
             return this.status;
           }
         }
@@ -157,7 +161,7 @@ export class GameScene {
 
     // D. Cek Jatuh ke Luar Batas Peta (Bawah)
     if (this.player.y > this.level.pixelHeight + 40) {
-      this.triggerDeath('Jatuh ke jurang hampa.');
+      this.triggerDeath('fall');
       return this.status;
     }
 
@@ -194,16 +198,29 @@ export class GameScene {
     // H. Update Partikel
     this.particles.update(dt);
 
+    // I. Update Sistem Dialog Stickman
+    this.dialogueManager.update(
+      dt,
+      this.player,
+      this.level.traps,
+      this.level.door,
+      this.hud.isPaused,
+      this.camera
+    );
+
     return this.status;
   }
 
-  private triggerDeath(_customMessage?: string): void {
+  private triggerDeath(cause = 'general'): void {
     if (this.status === 'DYING') return;
 
     this.status = 'DYING';
     this.deathTimer = CONFIG.DEATH_ANIMATION_DURATION;
     this.deathsInRun++;
     this.player.isDead = true;
+
+    // Trigger dialog kematian stickman
+    this.dialogueManager.onDeath(cause, this.deathsInRun);
 
     // Suara mati & guncangan kamera
     this.audio.playDeath();
@@ -223,6 +240,7 @@ export class GameScene {
     this.status = 'PLAYING';
     this.player.spawn(this.respawnX, this.respawnY);
     this.level.resetTraps();
+    this.dialogueManager.onRespawn();
   }
 
   private triggerWin(): void {
@@ -238,6 +256,8 @@ export class GameScene {
       this.player.x + this.player.width / 2,
       this.player.y + this.player.height / 2
     );
+
+    this.dialogueManager.onVictory(this.deathsInRun);
 
     // Simpan catatan level ke Storage
     Storage.recordLevelCompletion(this.level.id, this.levelTime, this.deathsInRun);
@@ -290,7 +310,10 @@ export class GameScene {
 
     this.camera.restore(ctx);
 
-    // 3. Render HUD & Overlay di Layar Tetap
+    // 3. Render Balon Percakapan Stickman (Layar Tetap / Screen Space)
+    this.dialogueManager.render(ctx);
+
+    // 4. Render HUD & Overlay di Layar Tetap
     this.hud.render(
       ctx,
       `LV ${this.level.id}`,
@@ -355,6 +378,18 @@ export class GameScene {
 
     if (action === 'menu') {
       return 'menu';
+    }
+
+    if (action === 'toggle_dialogue') {
+      Storage.setDialogueEnabled(!Storage.getDialogueEnabled());
+      return null;
+    }
+
+    if (action === 'cycle_dialogue_freq') {
+      const current = Storage.getDialogueFrequency();
+      const next = current === 'normal' ? 'often' : current === 'often' ? 'rare' : 'normal';
+      Storage.setDialogueFrequency(next);
+      return null;
     }
 
     if (action === 'next_level') {

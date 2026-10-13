@@ -2,11 +2,17 @@
 
 | | |
 |---|---|
-| **Versi** | 1.0 |
+| **Versi** | 1.1 |
 | **Platform** | Web (Desktop & Mobile browser) |
 | **Genre** | 2D Troll Platformer |
 | **Tools Pengembangan** | Google Antigravity (agent-driven IDE) |
-| **Status** | Draft siap eksekusi |
+| **Status** | Revisi: perbaikan bug, level lebih panjang, jebakan baru |
+
+### Changelog v1.1
+- **Bug fix**: aturan baru anti-bug (bagian 4.6), terutama jebakan yang muncul di dalam lantai (bagian 5.3).
+- **Level lebih panjang**: pintu keluar kini jauh dari spawn, level 4–10 kali lebih lebar (bagian 6.2–6.3).
+- **Jebakan baru** T20–T27: lantai hilang saat diinjak, lantai peluncur + duri langit-langit, lantai meledak, dan lainnya (bagian 5 dan 5.2).
+- Kriteria penerimaan, struktur kode, dan prompt Antigravity diperbarui (bagian 10–12).
 
 ---
 
@@ -23,7 +29,7 @@ Inti pengalamannya adalah **trial-and-error yang adil**: pemain mati, belajar, m
 ### 1.2 Tujuan Produk
 1. Game berjalan mulus (60 FPS) di browser modern tanpa instalasi.
 2. Kontrol sederhana dan responsif (keyboard + sentuh).
-3. Minimal **10 level** dengan kurva kesulitan yang meningkat.
+3. Minimal **10 level** dengan kurva kesulitan yang meningkat, masing-masing **panjang** (jalur 3–8 layar lebar) dengan pintu keluar jauh dari titik awal.
 4. Kematian terasa lucu dan cepat diulang (respawn < 1 detik), bukan membuat frustrasi.
 
 ### 1.3 Non-Goals (di luar cakupan v1.0)
@@ -101,6 +107,28 @@ Inti pengalamannya adalah **trial-and-error yang adil**: pemain mati, belajar, m
 - Jatuh keluar batas bawah level.
 - Terhimpit (platform bergerak/dinding menutup).
 
+### 4.6 Aturan Anti-Bug (Wajib)
+
+Daftar ini dibuat dari bug yang umum muncul di game jenis ini. Agent harus memastikan semuanya terpenuhi dan menulis tes untuknya.
+
+| # | Masalah | Aturan / Perbaikan |
+|---|---|---|
+| B1 | **Duri muncul terjebak di dalam lantai**, pemain lewat dengan aman | Duri yang muncul harus bergerak dari **bawah permukaan lantai ke atas permukaan** dan hitbox bahaya mengikuti ujung duri. Posisi akhir duri **harus di atas permukaan tile** (lihat 5.3). Hitbox aktif sejak ujung duri keluar dari permukaan. |
+| B2 | Pemain tembus lantai/dinding | Tabrakan per sumbu (X lalu Y), sub-step saat kecepatan tinggi, `dt` di-clamp ≤ 1/30 s. |
+| B3 | Jebakan tidak ter-reset setelah mati | Setiap jebakan wajib mengimplementasikan `reset()` yang mengembalikan semua state, timer, posisi, dan hitbox ke kondisi awal. |
+| B4 | Pemain mati berkali-kali dalam satu frame / respawn ganda | State `DYING` hanya bisa dimasuki sekali; abaikan hazard sampai respawn selesai. |
+| B5 | Hitbox tidak sama dengan visual | Hitbox bahaya tidak boleh lebih besar dari visual; hitbox pemain sedikit lebih kecil dari visual. Tersedia mode debug (`F2`) untuk menampilkan semua hitbox. |
+| B6 | Pemicu zona aktif berkali-kali | Setiap pemicu punya flag `triggered`; hanya sekali per percobaan, di-reset saat respawn. |
+| B7 | Pemain terjepit di dalam tile (platform bergerak/lantai muncul) | Jika pemain tumpang tindih dengan solid, dorong keluar ke sisi terdekat; jika tidak bisa, anggap **terhimpit** → mati. |
+| B8 | Pemain "menempel" pada platform bergerak atau lantai yang naik | Saat pemain berdiri di platform, terapkan delta gerak platform ke pemain sebelum fisika pemain. |
+| B9 | Urutan update membuat hasil tidak konsisten | Urutan tetap per frame: Input → Update trap → Update platform → Update pemain → Tabrakan solid → Cek hazard → Cek pintu/checkpoint → Kamera → Render. |
+| B10 | Lompatan terlalu besar saat tab di-background | Pause otomatis saat tab hilang fokus; `dt` di-clamp. |
+| B11 | Level tidak bisa diselesaikan (jebakan tidak adil / tidak ada jalur) | Setiap level wajib punya `solution` (daftar langkah/komentar) dan lolos **tes jangkauan** (lompatan maksimum tidak melebihi jarak platform; lihat 4.7). |
+| B12 | Input macet (tombol "tertahan") setelah kehilangan fokus | Reset semua status input pada event `blur` dan `visibilitychange`. |
+
+### 4.7 Batas Lompat (acuan desain level)
+Dengan nilai fisika pada 4.2: tinggi lompat maksimum ≈ **118 px (~3,7 tile)**, jarak lompat horizontal maksimum ≈ **~170 px (~5 tile)** pada kecepatan penuh. Desain level **tidak boleh** meminta lompatan melebihi 85% batas ini kecuali ada platform bantu. Tulis helper `canJump(dx, dy)` di `physics/` dan gunakan di tes validasi level.
+
 ---
 
 ## 5. Katalog Jebakan
@@ -110,9 +138,9 @@ Setiap jebakan diimplementasikan sebagai kelas dengan antarmuka yang sama: `upda
 | ID | Nama | Perilaku | Pemicu | Tampak Jelas? |
 |---|---|---|---|---|
 | T01 | **Duri Statis** | Duri di lantai/dinding/langit-langit. Mematikan saat disentuh. | Selalu aktif | Ya |
-| T02 | **Duri Muncul** | Duri keluar dari lantai secara tiba-tiba. | Pemain masuk zona pemicu | Tidak |
+| T02 | **Duri Muncul** | Duri **menyembul ke atas permukaan lantai** secara tiba-tiba (bukan terkubur di dalam lantai; lihat 5.3). | Pemain masuk zona pemicu | Tidak |
 | T03 | **Lantai Runtuh** | Tile bergetar 0,4 s lalu jatuh. | Pemain menginjak | Samar (retak) |
-| T04 | **Lantai Palsu / Lubang Tersembunyi** | Tampak seperti lantai biasa, langsung hilang. | Pemain menginjak / mendekat | Tidak |
+| T04 | **Lantai Palsu / Lubang Tersembunyi** | Tampak seperti lantai biasa, tidak punya tabrakan solid sama sekali, pemain langsung jatuh. | Selalu / mendekat | Tidak |
 | T05 | **Gergaji Bergerak** | Roda gergaji bergerak sepanjang jalur horizontal/vertikal/sirkular. | Selalu aktif | Ya |
 | T06 | **Gergaji Meluncur** | Gergaji tersembunyi meluncur cepat dari luar layar. | Pemain melewati garis tertentu | Tidak |
 | T07 | **Balok Menghimpit (Thwomp)** | Balok jatuh cepat ke bawah, lalu naik pelan. | Pemain di bawahnya | Ya |
@@ -128,6 +156,14 @@ Setiap jebakan diimplementasikan sebagai kelas dengan antarmuka yang sama: `upda
 | T17 | **Kontrol Terbalik** | Zona yang membalik kiri/kanan beberapa detik. | Zona | Tidak |
 | T18 | **Blok Tak Terlihat** | Blok yang menghalangi lompatan atau menjadi pijakan tersembunyi. | Selalu | Tidak |
 | T19 | **Teks Menipu** | Papan bertuliskan "Aman →" yang mengarah ke jebakan. | Narasi | Ya (menipu) |
+| T20 | **Lantai Hilang Saat Diinjak** | Lantai tampak normal, lenyap **seketika** (atau ≤ 0,1 s) saat dipijak. Pemain jatuh ke jurang/duri bawah dan mati. | Pemain menginjak | Tidak |
+| T21 | **Lantai Peluncur + Duri Langit-langit** | Lantai tiba-tiba meluncur ke atas membawa pemain; duri tiba-tiba muncul di langit-langit sehingga pemain tertusuk. | Pemain menginjak | Samar |
+| T22 | **Lantai Meledak** | Lantai berkedip/berasap sebentar lalu meledak; pemain yang masih di atasnya atau terkena radius ledakan mati. | Pemain menginjak / timer | Samar |
+| T23 | **Lantai Jadi Duri** | Lantai berubah menjadi duri tepat sesaat setelah pemain mendarat. | Pemain menginjak | Tidak |
+| T24 | **Lantai Terbuka (Trapdoor)** | Dua daun lantai terbuka ke bawah seperti pintu jebakan. | Zona / injak | Samar |
+| T25 | **Langit-langit Jatuh** | Blok langit-langit lepas dan jatuh saat pemain lewat di bawahnya. | Zona | Samar |
+| T26 | **Lantai Lompat Terbalik (Spring Palsu)** | Pegas yang melontarkan pemain ke arah gergaji/duri, bukan ke platform. | Pemain menginjak | Ya (menipu) |
+| T27 | **Lantai Bom Berantai** | Rangkaian lantai yang meledak berurutan mengikuti langkah pemain; pemain harus terus bergerak. | Pemain menginjak | Samar |
 
 ### 5.1 Prinsip Desain Jebakan ("Adil tapi Licik")
 1. **Satu kejutan per kesempatan**: pemain boleh mati oleh jebakan baru, tetapi harus bisa menghindarinya di percobaan kedua.
@@ -135,6 +171,63 @@ Setiap jebakan diimplementasikan sebagai kelas dengan antarmuka yang sama: `upda
 3. **Tidak ada kematian instan tanpa jalan keluar**: setiap jebakan harus bisa dihindari dengan input yang wajar.
 4. **Respawn cepat**: ulangi percobaan tanpa layar loading.
 5. Jebakan mengajarkan pola; level lanjut **menggabungkan** pola yang sudah dikenal.
+
+---
+
+### 5.2 Spesifikasi Detail Jebakan Baru
+
+Semua jebakan memakai state machine: `IDLE → ARMED → ACTIVE → DONE`, dan `reset()` selalu kembali ke `IDLE`.
+
+#### T20 — Lantai Hilang Saat Diinjak
+- **Visual**: identik dengan tile solid biasa (sedikit beda satu piksel/garis boleh sebagai petunjuk).
+- **Perilaku**: pada frame pemain menyentuh bagian atas tile, tile berubah non-solid dalam ≤ 0,1 s dan efek serpihan kecil muncul. Pemain mulai jatuh dengan gravitasi normal.
+- **Jatuh = mati**: di bawah tile harus ada **jurang** (lubang keluar batas bawah) atau **hazard** (duri/lava) sehingga kematian jelas. Lubang minimal 4 tile agar tidak bisa "diselamatkan" lompat balik.
+- **Variasi**: `delay` 0 s (instan), 0,3 s (getar dulu), atau berkelompok (beberapa tile berurutan).
+- **Reset**: tile kembali solid.
+
+#### T21 — Lantai Peluncur + Duri Langit-langit
+- **Visual**: platform kecil dengan tanda panah samar atau garis rel di sisi.
+- **Urutan**: (1) pemain menginjak, (2) jeda 0,15 s, (3) platform meluncur ke **atas** dengan akselerasi cepat (kecepatan puncak ~900 px/s) membawa pemain, (4) saat platform mencapai ±60% jarak, **duri langit-langit** menyembul turun dari atap, (5) platform berhenti di bawah duri sehingga pemain tertusuk, atau pemain harus melompat menyamping untuk selamat jika ada celah (versi adil).
+- **Aturan keadilan**: harus ada satu cara selamat, misalnya melompat keluar dari platform sebelum mencapai atap, atau ada celah tanpa duri di salah satu sisi.
+- **Reset**: platform kembali ke posisi awal, duri kembali tersembunyi di atap.
+- **Perhatikan**: gunakan penerapan delta platform ke pemain (B8) supaya pemain tidak tertinggal di udara.
+
+#### T22 — Lantai Meledak
+- **Fase**: `ARMED` (pemain menginjak) → **peringatan** 0,5–0,8 s (berkedip merah, asap, bunyi bip makin cepat) → `ACTIVE` ledakan.
+- **Ledakan**: radius 48–64 px (hitbox lingkaran). Pemain di dalam radius mati; tile hancur menjadi partikel dan menjadi non-solid.
+- **Efek**: layar goyang, kilatan putih singkat, serpihan terlempar, bunyi ledakan.
+- **Adil**: waktu peringatan cukup bagi pemain yang langsung berlari/melompat untuk keluar dari radius.
+- **Variasi**: ledakan memantulkan pemain ke atas (knockback) menuju duri.
+- **Reset**: tile kembali utuh.
+
+#### T23 — Lantai Jadi Duri
+- Tile berubah menjadi duri 0,25 s setelah pemain mendarat. Hitbox bahaya aktif setelah transformasi; beri satu frame animasi kilat sebagai petunjuk. Pemain yang langsung melompat lagi bisa selamat.
+
+#### T24 — Lantai Terbuka (Trapdoor)
+- Dua daun tile berayun ke bawah (animasi 0,2 s) saat pemain berada di atas zona pemicu. Tabrakan solid hilang pada awal animasi.
+
+#### T25 — Langit-langit Jatuh
+- Blok di atap bergetar 0,3 s lalu jatuh dengan gravitasi; mematikan pemain yang tertimpa, lalu menjadi solid di lantai (bisa menjadi pijakan atau penghalang).
+
+#### T26 — Pegas Palsu
+- Pegas melontarkan pemain dengan kecepatan −1100 px/s menuju area bahaya. Petunjuk: pegas berwarna agak pucat atau bertanda "?".
+
+#### T27 — Lantai Bom Berantai
+- 4–8 tile meledak berurutan setiap 0,25 s mulai dari tile yang diinjak, maju searah gerak pemain. Pemain harus terus bergerak/lompat cepat. Sediakan platform aman di ujung.
+
+### 5.3 Spesifikasi Duri Muncul (Perbaikan Bug "Duri di Dalam Lantai")
+
+**Masalah**: duri yang dimaksudkan muncul tiba-tiba terkubur di dalam tile lantai sehingga hitbox bahaya berada di dalam area solid, dan pemain yang berjalan di atas lantai tidak pernah menyentuhnya.
+
+**Aturan perbaikan**:
+1. **Posisi dasar**: duri didefinisikan dengan `baseY` = koordinat **permukaan atas tile lantai** (bukan pusat atau dalam tile).
+2. **Animasi**: tinggi duri `h` naik dari 0 ke `spikeHeight` (default 28 px) dalam 0,08 s (cepat). Ujung duri berada di `baseY - h`, jadi duri selalu bergerak **ke atas dari permukaan**.
+3. **Gambar**: duri digambar **di atas** lapisan tile (layer render duri > layer tile), dengan *clip* di garis permukaan agar tampak muncul dari celah.
+4. **Hitbox bahaya**: segitiga/persegi sempit dari `baseY` ke `baseY - h`, **di luar** area solid tile. Aktif ketika `h ≥ 30%` tinggi penuh.
+5. **Celah pemicu**: tile lantai tempat duri muncul digambar dengan celah/garis tipis (petunjuk samar) atau diganti **tile khusus** `spikeTrapTile` yang tetap solid untuk pijakan tetapi punya slot duri.
+6. **Zona pemicu** harus berada **sebelum** duri (pemain masuk zona → duri muncul beberapa tile di depan), bukan tepat di bawah kaki, agar bisa dihindari dengan lompat.
+7. **Tes otomatis**: buat tes yang menempatkan pemain berdiri di atas `spikeTrapTile`, memicu duri, dan memastikan pemain mati (hitbox bahaya beririsan dengan hitbox pemain).
+8. **Mode debug (F2)**: tampilkan hitbox bahaya dalam warna merah sehingga posisi duri mudah dicek visual.
 
 ---
 
@@ -168,26 +261,44 @@ Level didefinisikan sebagai data (JSON) agar mudah ditambah oleh agent tanpa men
 }
 ```
 
+> **Catatan:** contoh JSON di atas hanya ilustrasi format (ukuran diperkecil). Level sungguhan harus mengikuti ukuran minimum di 6.1a. Untuk jebakan baru gunakan tipe entitas `vanishingFloor`, `launcherFloor` (dengan `ceilingSpikes`), `explodingFloor`, `chainBomb`, dst.
+
+### 6.1a Panjang Level & Jarak Pintu (Perubahan v1.1)
+
+Level lama terlalu pendek sehingga pintu terlalu dekat. Aturan baru:
+
+| Parameter | Nilai |
+|---|---|
+| Lebar level | **min. 150 tile (4.800 px)**; level akhir hingga **300 tile (9.600 px)** |
+| Tinggi level | 17–34 tile (1–2 layar) boleh ada bagian vertikal |
+| Jarak spawn → pintu | **min. 4 layar lebar** (≥ 3.800 px) di level 1–3, makin jauh di level berikutnya |
+| Struktur | Bagi level menjadi **3–6 "bagian"** (section), tiap bagian memperkenalkan atau menggabungkan satu pola jebakan |
+| Checkpoint | Satu setiap 1–2 bagian (± setiap 30–45 detik jalan), kecuali level final yang lebih jarang |
+| Lanskap | Variasi: jalan datar, jurang, naik/turun, ruang vertikal, lorong sempit, agar tidak monoton |
+| Pintu | Terlihat dari kejauhan di akhir (kecuali level troll tertentu), dengan jalur kembali tidak mungkin |
+
+Kamera boleh memperlihatkan pintu lebih dulu (pan singkat di awal level) agar pemain tahu tujuannya jauh.
+
 ### 6.2 Daftar Level (minimal 10)
 
 | # | Nama | Jebakan Baru | Konsep |
 |---|---|---|---|
-| 1 | Pintu Pertama | T01, T03 | Tutorial: gerak, lompat, duri, lantai retak. Hampir tanpa trik. |
-| 2 | Jangan Percaya Lantai | T04, T02 | Lantai palsu dan duri muncul. Pertama kali pemain dikhianati. |
-| 3 | Roda Bergigi | T05, T09 | Gergaji dan platform bergerak, butuh timing. |
-| 4 | Dari Atas! | T07, T10 | Balok jatuh dan meriam. Pemain belajar membaca pola. |
-| 5 | Bendera Mencurigakan | T13, T12 | Checkpoint dan tombol palsu. |
-| 6 | Dinding Lapar | T08, T06 | Jebakan zona yang memburu pemain. |
-| 7 | Terbalik | T16, T17 | Gravitasi dan kontrol berubah. |
-| 8 | Laser Disko | T11 + kombinasi | Ritme, platform, dan gergaji bersamaan. |
-| 9 | Pintu Itu Bohong | T14, T15, T18 | Pintu keluar palsu dan kabur. Pemain curiga pada semuanya. |
-| 10 | Pintu Terakhir | Semua | Gabungan semua pola, durasi lebih panjang, final troll. |
+| 1 | Pintu Pertama | T01, T03, T20 | Tutorial panjang: gerak, lompat, duri, lantai retak, lantai hilang pertama (di jurang dangkal yang adil). |
+| 2 | Jangan Percaya Lantai | T04, T02, T20, T23, T03, T06, T07, T13, T14, T18, T21, T22, T24, T25, T26, T27 | Gauntlet lantai penuh tipuan: lantai palsu, runtuh, hilang, duri muncul, peluncur, trapdoor, pilar tumbang, bom berantai, checkpoint palsu, hingga pintu palsu. |
+| 3 | Roda Bergigi | T05, T09, T24 | Gergaji, platform bergerak, trapdoor, butuh timing. |
+| 4 | Dari Atas! | T07, T10, T25 | Balok jatuh, meriam, langit-langit jatuh. Pemain belajar membaca pola. |
+| 5 | Bendera Mencurigakan | T13, T12, T22 | Checkpoint palsu, tombol palsu, lantai meledak. |
+| 6 | Naik Lalu Tertusuk | T21, T08, T06 | Lantai peluncur + duri langit-langit, dinding menutup, gergaji meluncur. |
+| 7 | Terbalik | T16, T17, T26 | Gravitasi dan kontrol berubah, pegas palsu. |
+| 8 | Laser Disko | T11, T27 + kombinasi | Ritme, lantai bom berantai, platform, dan gergaji bersamaan. |
+| 9 | Pintu Itu Bohong | T14, T15, T18, T22 | Pintu keluar palsu dan kabur, ledakan di depan pintu. Pemain curiga pada semuanya. |
+| 10 | Pintu Terakhir | Semua | Gabungan semua pola, level terpanjang (≥ 300 tile), final troll. |
 
 ### 6.3 Kurva Kesulitan
 - Level 1–2: tutorial, rata-rata mati < 5 kali.
 - Level 3–6: menengah, 5–20 kali.
 - Level 7–10: sulit, 15–50 kali per level.
-- Satu level dirancang selesai dalam **30–120 detik** jika tanpa mati.
+- Satu level dirancang selesai dalam **2–5 menit** jika tanpa mati (level 1–3 ≈ 2 menit, level 8–10 ≈ 4–5 menit), karena jalur kini lebih panjang.
 
 ---
 
@@ -299,13 +410,17 @@ stickman-trap-door/
 │  │     ├─ FakeFloor.ts
 │  │     ├─ Saw.ts
 │  │     ├─ MovingPlatform.ts
+│  │     ├─ VanishingFloor.ts     # T20
+│  │     ├─ LauncherFloor.ts      # T21 (+ CeilingSpikes)
+│  │     ├─ ExplodingFloor.ts     # T22, T27
 │  │     └─ ... (sesuai katalog)
 │  ├─ levels/
 │  │  ├─ LevelLoader.ts
 │  │  ├─ level01.json
 │  │  └─ ... level10.json
 │  ├─ physics/
-│  │  └─ Collision.ts         # AABB, tile collision
+│  │  ├─ Collision.ts         # AABB, tile collision
+│  │  └─ Reach.ts             # canJump(dx,dy) untuk validasi level
 │  ├─ ui/
 │  │  ├─ Menu.ts
 │  │  ├─ LevelSelect.ts
@@ -317,7 +432,9 @@ stickman-trap-door/
 │     └─ EndScene.ts
 └─ tests/
    ├─ collision.test.ts
-   └─ player.test.ts
+   ├─ player.test.ts
+   ├─ traps.test.ts        # spike muncul, lantai hilang, peluncur, ledakan, reset()
+   └─ levels.test.ts       # panjang minimal, jarak pintu, jangkauan lompat, ada solusi
 ```
 
 ### 10.2 State Machine Game
@@ -351,7 +468,10 @@ stickman-trap-door/
 **Gameplay**
 - Pemain bisa berjalan, melompat, dan mendarat dengan kontrol responsif; coyote time & jump buffer berfungsi.
 - Semua jebakan di katalog berfungsi sesuai deskripsi dan kembali normal setelah respawn.
-- Level 1–10 dapat diselesaikan (setiap level punya solusi yang dapat ditempuh).
+- Level 1–10 dapat diselesaikan (setiap level punya solusi yang dapat ditempuh) dan memenuhi panjang minimal pada 6.1a.
+- **Duri muncul (T02)** selalu berada di atas permukaan lantai dan mematikan pemain yang berdiri di titiknya (tes otomatis + verifikasi visual dengan mode debug).
+- **T20** menjatuhkan pemain ke area mati; **T21** membawa pemain naik lalu duri langit-langit muncul dan ada jalur selamat; **T22** meledak dengan peringatan dan radius sesuai spesifikasi.
+- Seluruh aturan anti-bug B1–B12 (bagian 4.6) lolos.
 - Respawn setelah mati terjadi dalam ≤ 1 detik.
 
 **Teknis**
@@ -383,8 +503,11 @@ Antigravity bekerja paling baik dengan tugas yang terukur per fase. Berikan satu
 ### Fase 3 — Katalog Jebakan
 > Implementasikan jebakan T01–T19 dengan antarmuka `Trap` yang sama (bagian 5). Kerjakan bertahap: statis → bergerak → pemicu zona → menipu (T12–T15) → modifikasi dunia (T16–T18). Tambahkan satu level demo per kelompok jebakan.
 
+### Fase 3b — Perbaikan Bug & Jebakan Baru (v1.1)
+> Baca PRD.md bagian 4.6, 5.2, dan 5.3. Pertama, audit kode yang ada terhadap aturan B1–B12 dan buat daftar bug beserta penyebabnya. Perbaiki duri muncul (T02) sehingga selalu berada di atas permukaan lantai, tambahkan mode debug hitbox (F2), dan tambahkan tes otomatis. Kemudian implementasikan T20 (lantai hilang), T21 (lantai peluncur + duri langit-langit), T22 (lantai meledak), lalu T23–T27. Setelah itu jalankan game di browser dan beri bukti (rekaman/screenshot) tiap jebakan bekerja dan ter-reset saat respawn.
+
 ### Fase 4 — Konten Level
-> Buat level 2–10 mengikuti tabel bagian 6.2 dan prinsip desain bagian 5.1. Verifikasi setiap level dapat diselesaikan; catat solusi singkat di komentar JSON.
+> Buat ulang level 1–10 mengikuti tabel bagian 6.2, aturan panjang bagian 6.1a (min. 150 tile, pintu jauh, 3–6 bagian, checkpoint berkala), dan prinsip desain bagian 5.1. Validasi dengan `levels.test.ts` (panjang, jarak pintu, jangkauan lompat) dan catat solusi singkat di JSON. Verifikasi setiap level dapat diselesaikan di browser.
 
 ### Fase 5 — UI, Audio, Polish
 > Tambahkan menu, pilih level, HUD, jeda, layar selesai, ending. Sintesis SFX & musik dengan Web Audio. Tambahkan partikel, layar goyang, pesan kematian, penyimpanan progres.
@@ -411,6 +534,8 @@ Antigravity bekerja paling baik dengan tugas yang terukur per fase. Berikan satu
 | Tunneling (tembus dinding pada kecepatan tinggi) | Bug tabrakan | Gerak per sumbu + sub-step |
 | Audio diblokir autoplay | Tanpa suara | Inisialisasi audio pada interaksi pertama |
 | Cakupan membesar | Jadwal molor | Patuhi prioritas P0 → P1 → P2 |
+| Level panjang terasa membosankan | Pemain berhenti | Bagi jadi bagian bervariasi, checkpoint berkala, kejutan di tiap bagian |
+| Jebakan baru (T20–T27) terasa tidak adil | Frustrasi | Petunjuk samar, jalur selamat, waktu peringatan cukup, playtest |
 
 ---
 

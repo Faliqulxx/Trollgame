@@ -34,12 +34,13 @@ export class MenuScene {
 
   public buttons = [
     { id: 'play', x: 0, y: 0, w: 260, h: 48, label: '▶ MAIN' },
-    { id: 'select', x: 0, y: 0, w: 260, h: 44, label: '📜 PILIH LEVEL' },
-    { id: 'leaderboard', x: 0, y: 0, w: 260, h: 44, label: '🏆 PAPAN PERINGKAT' },
-    { id: 'audio_down', x: 0, y: 0, w: 46, h: 42, label: '➖' },
-    { id: 'audio', x: 0, y: 0, w: 156, h: 42, label: '🔊 SUARA: 80%' },
-    { id: 'audio_up', x: 0, y: 0, w: 46, h: 42, label: '➕' },
-    { id: 'reset', x: 0, y: 0, w: 260, h: 38, label: '↺ RESET PROGRES' }
+    { id: 'select', x: 0, y: 0, w: 260, h: 42, label: '📜 PILIH LEVEL' },
+    { id: 'leaderboard', x: 0, y: 0, w: 260, h: 42, label: '🏆 PAPAN PERINGKAT' },
+    { id: 'audio_down', x: 0, y: 0, w: 46, h: 40, label: '➖' },
+    { id: 'audio', x: 0, y: 0, w: 156, h: 40, label: '🔊 SUARA: 80%' },
+    { id: 'audio_up', x: 0, y: 0, w: 46, h: 40, label: '➕' },
+    { id: 'dialogue', x: 0, y: 0, w: 260, h: 38, label: '💬 DIALOG: AKTIF' },
+    { id: 'reset', x: 0, y: 0, w: 260, h: 36, label: '↺ RESET PROGRES' }
   ];
 
   constructor(audio: AudioManager) {
@@ -49,8 +50,8 @@ export class MenuScene {
   }
 
   private layoutButtons(): void {
-    const startY = 245;
-    const spacing = 48;
+    const startY = 226;
+    const spacing = 43;
     const cx = (CONFIG.CANVAS_WIDTH - 260) / 2;
 
     this.buttons[0].x = cx;
@@ -73,9 +74,13 @@ export class MenuScene {
     this.buttons[5].x = cx + 52 + 162;
     this.buttons[5].y = audioY;
 
-    // Reset Progres
+    // Tombol Toggle Dialog Karakter
     this.buttons[6].x = cx;
     this.buttons[6].y = startY + spacing * 4;
+
+    // Reset Progres
+    this.buttons[7].x = cx;
+    this.buttons[7].y = startY + spacing * 5;
   }
 
   public leaderboardPage = 0;
@@ -92,6 +97,11 @@ export class MenuScene {
     const vol = this.audio.getVolumePercent();
     const muted = this.audio.getMuted() || vol <= 0;
     this.buttons[4].label = muted ? '🔇 SUARA: 0%' : `🔊 SUARA: ${vol}%`;
+
+    const diagOn = Storage.getDialogueEnabled();
+    const freq = Storage.getDialogueFrequency();
+    const freqStr = freq === 'rare' ? 'Jarang' : freq === 'often' ? 'Sering' : 'Normal';
+    this.buttons[6].label = diagOn ? `💬 DIALOG: AKTIF (${freqStr})` : '💬 DIALOG: NONAKTIF';
 
     // Handle scroll wheel di modal leaderboard
     if (this.showLeaderboardModal && wheelDeltaY !== 0) {

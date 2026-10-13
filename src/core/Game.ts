@@ -168,6 +168,21 @@ export class Game {
             this.audio.increaseVolume(0.1);
           } else if (action === 'audio') {
             this.audio.cycleVolume();
+          } else if (action === 'dialogue') {
+            const current = Storage.getDialogueEnabled();
+            if (current) {
+              const freq = Storage.getDialogueFrequency();
+              if (freq === 'normal') {
+                Storage.setDialogueFrequency('often');
+              } else if (freq === 'often') {
+                Storage.setDialogueFrequency('rare');
+              } else {
+                Storage.setDialogueEnabled(false);
+              }
+            } else {
+              Storage.setDialogueEnabled(true);
+              Storage.setDialogueFrequency('normal');
+            }
           } else if (action === 'reset') {
             if (confirm('Apakah kamu yakin ingin mereset seluruh progres level?')) {
               Storage.resetProgress();

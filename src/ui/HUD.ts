@@ -1,6 +1,7 @@
 // Komponen HUD, Overlay Kematian, Jeda & Selesai Level (PRD Bagian 8.1)
 
 import { CONFIG } from '../config';
+import { Storage } from '../core/Storage';
 
 export interface ButtonRect {
   id: string;
@@ -300,7 +301,7 @@ export class HUD {
     ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
 
     const mw = 380;
-    const mh = 310;
+    const mh = 360;
     const mx = (CONFIG.CANVAS_WIDTH - mw) / 2;
     const my = (CONFIG.CANVAS_HEIGHT - mh) / 2;
 
@@ -314,21 +315,21 @@ export class HUD {
 
     // Judul
     ctx.fillStyle = CONFIG.COLORS.TEXT_DARK;
-    ctx.font = '900 26px Outfit, sans-serif';
+    ctx.font = '900 24px Outfit, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('GAME DIJEDA', CONFIG.CANVAS_WIDTH / 2, my + 38);
+    ctx.fillText('GAME DIJEDA', CONFIG.CANVAS_WIDTH / 2, my + 34);
 
     // KONTROL VOLUME (TOMBOL MINUS, SLIDER TRACK, TOMBOL PLUS)
     const effectiveVol = isMuted ? 0 : volumePercent;
-    ctx.font = 'bold 14px Outfit, sans-serif';
+    ctx.font = 'bold 13px Outfit, sans-serif';
     ctx.fillStyle = '#495057';
-    ctx.fillText(`🔊 Volume Suara: ${isMuted || effectiveVol === 0 ? 'Bisu (0%)' : effectiveVol + '%'}`, CONFIG.CANVAS_WIDTH / 2, my + 70);
+    ctx.fillText(`🔊 Volume Suara: ${isMuted || effectiveVol === 0 ? 'Bisu (0%)' : effectiveVol + '%'}`, CONFIG.CANVAS_WIDTH / 2, my + 60);
 
     // Tombol Minus [-]
     const minusX = mx + 30;
-    const minusY = my + 82;
+    const minusY = my + 70;
     const minusW = 38;
-    const minusH = 32;
+    const minusH = 30;
 
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = CONFIG.COLORS.STICKMAN;
@@ -346,7 +347,7 @@ export class HUD {
 
     // Slider Bar
     const trackX = mx + 76;
-    const trackY = my + 86;
+    const trackY = my + 73;
     const trackW = mw - 152;
     const trackH = 24;
 
@@ -379,9 +380,9 @@ export class HUD {
 
     // Tombol Plus [+]
     const plusX = mx + mw - 68;
-    const plusY = my + 82;
+    const plusY = my + 70;
     const plusW = 38;
-    const plusH = 32;
+    const plusH = 30;
 
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = CONFIG.COLORS.STICKMAN;
@@ -395,17 +396,60 @@ export class HUD {
     ctx.font = '900 18px Outfit, sans-serif';
     ctx.fillText('➕', plusX + plusW / 2, plusY + plusH / 2);
 
+    // PENGATURAN DIALOG KARAKTER (ON/OFF & FREKUENSI)
+    const diagEnabled = Storage.getDialogueEnabled();
+    const diagFreq = Storage.getDialogueFrequency();
+    const diagBtnY = my + 114;
+
+    // Tombol 1: Toggle Dialog On/Off
+    const diagToggleX = mx + 30;
+    const diagToggleW = 155;
+    const diagToggleH = 32;
+
+    ctx.fillStyle = diagEnabled ? '#e8f5e9' : '#ffebee';
+    ctx.strokeStyle = diagEnabled ? '#2e7d32' : '#c62828';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.roundRect(diagToggleX, diagBtnY, diagToggleW, diagToggleH, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = diagEnabled ? '#1b5e20' : '#b71c1c';
+    ctx.font = 'bold 12px Outfit, sans-serif';
+    ctx.fillText(diagEnabled ? '💬 Dialog: Aktif' : '💬 Dialog: Mati', diagToggleX + diagToggleW / 2, diagBtnY + diagToggleH / 2 + 1);
+
+    // Tombol 2: Frekuensi Dialog
+    const freqBtnX = mx + 195;
+    const freqBtnW = 155;
+    const freqBtnH = 32;
+
+    ctx.fillStyle = '#f8f9fa';
+    ctx.strokeStyle = CONFIG.COLORS.STICKMAN;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.roundRect(freqBtnX, diagBtnY, freqBtnW, freqBtnH, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    let freqLabel = 'Frekuensi: Normal';
+    if (diagFreq === 'rare') freqLabel = 'Frekuensi: Jarang';
+    if (diagFreq === 'often') freqLabel = 'Frekuensi: Sering';
+
+    ctx.fillStyle = CONFIG.COLORS.TEXT_DARK;
+    ctx.font = 'bold 12px Outfit, sans-serif';
+    ctx.fillText(freqLabel, freqBtnX + freqBtnW / 2, diagBtnY + freqBtnH / 2 + 1);
+
     // Tombol-Tombol Aksi
     const pauseButtons = [
-      { y: my + 130, label: '▶ Lanjutkan Permainan', id: 'resume' },
-      { y: my + 178, label: '↻ Ulangi Level (R)', id: 'restart_modal' },
-      { y: my + 226, label: '📜 Pilih Level / Menu', id: 'menu' }
+      { y: my + 162, label: '▶ Lanjutkan Permainan', id: 'resume' },
+      { y: my + 210, label: '↻ Ulangi Level (R)', id: 'restart_modal' },
+      { y: my + 258, label: '📜 Pilih Level / Menu', id: 'menu' }
     ];
 
     for (const b of pauseButtons) {
       const bx = mx + 40;
       const bw = mw - 80;
-      const bh = 38;
+      const bh = 36;
       ctx.fillStyle = '#ffffff';
       ctx.strokeStyle = CONFIG.COLORS.STICKMAN;
       ctx.lineWidth = 2;
@@ -459,39 +503,53 @@ export class HUD {
     // 2. Cek tombol modal pause
     if (this.isPaused) {
       const mw = 380;
+      const mh = 360;
       const mx = (CONFIG.CANVAS_WIDTH - mw) / 2;
-      const my = (CONFIG.CANVAS_HEIGHT - 310) / 2;
+      const my = (CONFIG.CANVAS_HEIGHT - mh) / 2;
 
       // Cek tombol minus [-]
       const minusX = mx + 30;
-      const minusY = my + 82;
-      if (px >= minusX && px <= minusX + 38 && py >= minusY && py <= minusY + 32) {
+      const minusY = my + 70;
+      if (px >= minusX && px <= minusX + 38 && py >= minusY && py <= minusY + 30) {
         return 'volume_down';
       }
 
       // Cek tombol plus [+]
       const plusX = mx + mw - 68;
-      const plusY = my + 82;
-      if (px >= plusX && px <= plusX + 38 && py >= plusY && py <= plusY + 32) {
+      const plusY = my + 70;
+      if (px >= plusX && px <= plusX + 38 && py >= plusY && py <= plusY + 30) {
         return 'volume_up';
       }
 
       // Cek track slider volume
       const trackX = mx + 76;
-      const trackY = my + 82;
+      const trackY = my + 70;
       const trackW = mw - 152;
-      if (px >= trackX && px <= trackX + trackW && py >= trackY && py <= trackY + 32) {
+      if (px >= trackX && px <= trackX + trackW && py >= trackY && py <= trackY + 30) {
         const ratio = Math.max(0, Math.min(1, (px - trackX) / trackW));
         return `volume_set:${ratio.toFixed(2)}`;
+      }
+
+      // Cek tombol dialog toggle
+      const diagToggleX = mx + 30;
+      const diagBtnY = my + 114;
+      if (px >= diagToggleX && px <= diagToggleX + 155 && py >= diagBtnY && py <= diagBtnY + 32) {
+        return 'toggle_dialogue';
+      }
+
+      // Cek tombol frekuensi dialog
+      const freqBtnX = mx + 195;
+      if (px >= freqBtnX && px <= freqBtnX + 155 && py >= diagBtnY && py <= diagBtnY + 32) {
+        return 'cycle_dialogue_freq';
       }
 
       const bx = mx + 40;
       const bw = mw - 80;
 
       if (px >= bx && px <= bx + bw) {
-        if (py >= my + 130 && py <= my + 130 + 38) return 'resume';
-        if (py >= my + 178 && py <= my + 178 + 38) return 'restart';
-        if (py >= my + 226 && py <= my + 226 + 38) return 'menu';
+        if (py >= my + 162 && py <= my + 162 + 36) return 'resume';
+        if (py >= my + 210 && py <= my + 210 + 36) return 'restart';
+        if (py >= my + 258 && py <= my + 258 + 36) return 'menu';
       }
       return null;
     }

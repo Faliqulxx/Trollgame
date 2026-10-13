@@ -25,6 +25,8 @@ export interface SaveData {
     sfx: number;
     music: number;
     language: 'id' | 'en';
+    dialogueEnabled?: boolean;
+    dialogueFrequency?: 'rare' | 'normal' | 'often';
   };
 }
 
@@ -44,7 +46,9 @@ export class Storage {
     settings: {
       sfx: 0.8,
       music: 0.4,
-      language: 'id'
+      language: 'id',
+      dialogueEnabled: true,
+      dialogueFrequency: 'normal'
     }
   };
 
@@ -230,6 +234,24 @@ export class Storage {
 
   public static getLevelDeaths(levelId: number): number {
     return Storage.data.levels[levelId]?.deaths || 0;
+  }
+
+  public static getDialogueEnabled(): boolean {
+    return Storage.data.settings.dialogueEnabled !== false;
+  }
+
+  public static setDialogueEnabled(enabled: boolean): void {
+    Storage.data.settings.dialogueEnabled = enabled;
+    Storage.save();
+  }
+
+  public static getDialogueFrequency(): 'rare' | 'normal' | 'often' {
+    return Storage.data.settings.dialogueFrequency || 'normal';
+  }
+
+  public static setDialogueFrequency(freq: 'rare' | 'normal' | 'often'): void {
+    Storage.data.settings.dialogueFrequency = freq;
+    Storage.save();
   }
 
   public static updateSettings(settings: Partial<SaveData['settings']>): void {
